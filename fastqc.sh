@@ -16,4 +16,4 @@ for fastq_file in $directory/*;do #loops through directory
     fi
 done
 #lets you now how long the script has run
-date 
+date  
