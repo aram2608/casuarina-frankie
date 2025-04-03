@@ -7,13 +7,13 @@ source /home/ja1473/anaconda3/etc/profile.d/conda.sh
 conda activate genomics
 
 date #prints start time of script
-input_directory=$1 
-output_directory=$2
-adapters=
+input_directory=$1 #provide input directory
+output_directory=$2 #provide output directory
+adapters=$3 #provide path to adapter file
 
-#added safety test to ensure both directories are provided
-if [-z $input_directory] || [-z $output_directory]; then
-    echo "Usage: $0 <input_directory> <output_directory>"
+#added safety test to ensure all directories are provided
+if [ -z $input_directory ] || [ -z $output_directory ] || [ -z $adapters ]; then
+    echo "Usage: $0 <input_directory> <output_directory> </path/to/adapters>"
     exit 1
 fi
 
@@ -31,10 +31,14 @@ for fastq_file in $input_directory/*;do #loop through files of input directory
         trimmomatic SE -phred33 $fastq_file $output_file \
             ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 \
             LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
-
+            
+        #an error handling step in case a file is not processed for some reason
+        if  [ $? -ne 0 ]; then
+            echo "Error Trimming $fastq_file"
+        fi
     fi
 done
-date 
+date #logging of script run time
 
 #following parameters applied
 #TrueSeq3-SE adapters removed
