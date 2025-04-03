@@ -2,7 +2,8 @@
 
 #to display the time at the start of the script
 date
-directory=$1 #stores a directory from a command line argument
+input_directory=$1
+output_directory=$2
 
 echo "$directory will now be processed" #echos the directory to be processed
 
@@ -10,7 +11,7 @@ echo "$directory will now be processed" #echos the directory to be processed
 for fastq_file in $directory/*;do #loops through directory
     echo Starting $fastq_file
     if [[ $fastq_file == *fastq.gz ]];then #test if files are fastq files, must be zipped files
-        fastqc -o . $fastq_file #perfomrs fastQC analysis for all files in directory
+        fastqc -o $output_directory $fastq_file #performs fastQC analysis for all files in directory
     else
     echo $fastq_file is not a fastq file #prints which files can not be processed
     fi
