@@ -8,23 +8,30 @@ conda activate genomics
 
 date #prints start time of script
 input_directory=$1 
-output_diretory=$2
+output_directory=$2
 adapters=
 
+#added safety test to ensure both directories are provided
+if [-z $input_directory] || [-z $output_directory]; then
+    echo "Usage: $0 <input_directory> <output_directory>"
+    exit 1
+fi
+
 echo $input_directory will now be processed
+mkdir -p $output_directory #makes output directory just in case
 
 #loop to trim files
 for fastq_file in $input_directory/*;do #loop through files of input directory
-    output_prefix=${trimmed_} #in order to attach trimmed prefix
-    output_file=${output_prefix}${fastq_file} #new output file
-    
-    if [[ $fastq_file == *fastq.gz ]] #tests for fastq file
-        then
+    if [[ $fastq_file == *fastq.gz ]]; then #tests for fastq file
+        file_name=$(basename $fastq_file) #creates basename for files
+        output_file=$output_directory/trimmed_$file_name
+
         echo now trimming $fastq_file -> $output_file; #prints file to be trimmed
 
         trimmomatic SE -phred33 $fastq_file $output_file \
             ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 \
             LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+
     fi
 done
 date 
