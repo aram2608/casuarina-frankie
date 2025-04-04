@@ -33,6 +33,9 @@ for trimmed_fastq in $trimmed_fastq_directory/*.fastq.gz; do #loop directory and
     #check if hisat2 command failed
     if [ $? -ne 0 ]; then
         echo "Failure for $trimmed_fastq alignment"
+    else
+        echo "Compressing $output_SAM"
+        gzip -f $output_SAM
     fi
 done
 
