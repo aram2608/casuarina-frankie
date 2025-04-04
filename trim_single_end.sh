@@ -3,6 +3,12 @@
 #a script using trimmmomatic to trim single-end illumina reads
 #loaded from the RON server
 
+#run the following command to download the adapter file for Single End Illumina
+#wget https://raw.githubusercontent.com/timflutre/trimmomatic/master/adapters/TruSeq3-SE.fa
+
+#whatever directory you ran the command in will be the input for the adapter
+#directory
+
 source /home/ja1473/anaconda3/etc/profile.d/conda.sh
 conda activate genomics
 
