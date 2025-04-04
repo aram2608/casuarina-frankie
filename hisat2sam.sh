@@ -7,9 +7,18 @@ output_SAM_directory=$3
 
 #safety feature to ensure all inputs are included
 if [ -z $trimmed_fastq_directory ] || [ -z $input_index_hisat2 ] || [ -z $output_SAM_directory ]; then
-    echo "Usage: ./gene_model_prep.sh <trimmed_fastq_directory> <input_index_directory>"
+    echo "Usage: ./hisat2sam.sh <trimmed_fastq_directory> <input_index_directory/index <output_SAM_directory>"
     exit 1
 fi
+
+#check index directory and make sure indexex exist
+required_extensions=(1 2 3 4 5 6 7 8)
+for extension in ${required_extensions[@]}; do
+    if [ ! -f ${input_index_hisat2}.${extension}.ht2 ]; then
+        echo "Index files are missing"
+        exit 1
+    fi
+done
 
 mkdir -p $output_SAM_directory #makes directory just in case
 
@@ -22,7 +31,6 @@ for trimmed_fastq in $input_fastq_directory/*.fastq.gz; do #loop directory and s
     hisat2 --phred33 --dta -x $input_index_hisat2 -U $trimmed_fastq -S $output_sum
 
     #check if hisat2 command failed
-
     if [ $? -ne 0]; then
         echo "Failure for $trimmed_fastq alignment"
     fi
