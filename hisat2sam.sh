@@ -11,24 +11,20 @@ if [ -z $trimmed_fastq_directory ] || [ -z $input_index_hisat2 ] || [ -z $output
     exit 1
 fi
 
-mkdir -p $output_BAM_directory #makes directory just in case
+mkdir -p $output_SAM_directory #makes directory just in case
 
 #using hisat2 to create SAM files
-for trimmed_fastq in $input_fastq_directory/*; do #loop directory
+for trimmed_fastq in $input_fastq_directory/*.fastq.gz; do #loop directory and search for zipped fastq files
     echo Starting alignment for $trimmed_fastq
-    if [[ $trimmed_fastq == *.fastq.gz ]]; then #tests if file is a fastq
-        file_name=$(basename $trimmed_fastq) #extracts basename from input
-        output_SAM=$output_BAM_directory/$file_name.sam #creates
+    base_name=$(basename $trimmed_fastq) #extracts basename from input
+    output_SAM=$output_SAM_directory/$base_name_name.sam #creates SAM file name from fastq file name
 
-        for index in $input_index_hisat2/*; do #loop through index directory
-        
-            hisat2 --phred33 --dta -x $index -U $trimmed_fastq -S $output_SAM
+    hisat2 --phred33 --dta -x $input_index_hisat2 -U $trimmed_fastq -S $output_sum
 
-            #safety check to ensure previous command was successful
-            if [ $? -ne 0 ]; then
-                echo Failure in processing $trimmed_fastq
-            fi
-        done
+    #check if hisat2 command failed
+
+    if [ $? -ne 0]; then
+        echo "Failure for $trimmed_fastq alignment"
     fi
 done
 
