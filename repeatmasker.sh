@@ -14,14 +14,28 @@ fi
 
 for genome in $genome_directory/*.fna; do #loop through directory for genome
     #check to ensure genome is in directory
-    if [ -z $genome ];then
-        echo "No genome in directory"
+    if [ -! -f $genome ];then
+        echo "No genome in $genome_directory"
         exit 1
     fi
-    #Chunk of script to mask repeats
-    BuildDatabase -name casuarina $genome
-    RepeatModeler -casuarina -pa 20 -LTRStruct >> mask.log
-    RepeatMasker -pa 36 -gff -lib consensi.fa.classified -dir $masked_repeats_directory -xsmall $genome
+
+    #make a database name
+    database="casuarina"
+
+    #make a working directory
+    mkdir -p $masked_repeats_directory/$base_file
+    cd $masked_repeats_directory/$base_file || exit 1
+
+    #Build repeat modeler database
+    BuildDatabase -name $database $genome
+    
+    #run repeatmodeler (output is consensi.fa.classified)
+    RepeatModeler -database $database -pa 20 -LTRStruct >> mask.log
+
+    #run repeatmasker with repeat library
+    RepeatMasker -pa 20 -gff -xsmall -lib consensi.fa.classified -dir . $genome
+
+    cd - >/dev/null #go back to previous directory
 done
 
 date #lets you know the end time of script
