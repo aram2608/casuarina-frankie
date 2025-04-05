@@ -1,53 +1,64 @@
 #!/bin/bash
 
-date #print start time of script
-genome_directory=$1 #input to genome directory
-masked_repeats_directory=$2 #output directory
+date  # Print start time of script
 
-mkdir -p $masked_repeats_directory #makes output directory just in case
+genome_directory=$1               # Input to genome directory
+masked_repeats_directory=$2       # Output directory
 
-#check to ensure all args are used
-if [ -z $genome_directory ] || [ -z $masked_repeats_directory ]; then 
+# Check to ensure all args are used
+if [ -z "$genome_directory" ] || [ -z "$masked_repeats_directory" ]; then 
     echo "Usage: ./repeatmasker.sh <genome_directory> <output_directory>"
     exit 1
 fi
 
-for genome in $genome_directory/*.fna; do #loop through directory for genome
-    #check to ensure genome is in directory
-    if [ ! -f $genome ];then
-        echo "No genome in $genome_directory"
+mkdir -p "$masked_repeats_directory"  # Make output directory if needed
+
+# Loop through genomes
+for genome in "$genome_directory"/*.fna; do
+    if [ ! -f "$genome" ]; then
+        echo "No genome found in $genome_directory"
         exit 1
     fi
 
-    #make a database name
+    # Set hardcoded database name
     database="casuarina"
 
-    #make a working directory
-    mkdir -p $masked_repeats_directory/$database
-    cd $masked_repeats_directory/$database || exit 1
+    # Make a working directory
+    mkdir -p "$masked_repeats_directory/$database"
+    cd "$masked_repeats_directory/$database" || exit 1
 
     echo "Processing genome: $genome"
 
-    #Build repeat modeler database
-    BuildDatabase -name $database $genome
+    # Build RepeatModeler database
+    BuildDatabase -name "$database" "$genome"
     
-    #run repeatmodeler (output is consensi.fa.classified)
-    if [ ! -f "consensi.fa.classified" ]; then #a check to make sure output does not exist already
-        RepeatModeler -database $database -pa 20 -LTRStruct >> mask.log
+    # Run RepeatModeler (without -LTRStruct)
+    if [ ! -f "consensi.fa.classified" ]; then
+        RepeatModeler -database "$database" -pa 20 >> mask.log
     else
-        echo "Repeat library already exist, skipping RepeatModeler"
+        echo "Repeat library already exists, skipping RepeatModeler"
     fi
 
-    #run repeatmasker with repeat library
-    RepeatMasker -pa 20 -gff -xsmall -lib consensi.fa.classified -dir . $genome
+    # Check that RepeatModeler succeeded
+    if [ ! -s "consensi.fa.classified" ]; then
+        echo "ERROR: RepeatModeler failed or produced empty output."
+        exit 1
+    fi
 
-    #extract masked fasta for braker2
-    masked_file=$(basename $genome).masked
-    cp $masked_file $masked_repeats_directory/${database}.softmasked
+    # Run RepeatMasker
+    RepeatMasker -pa 20 -gff -xsmall -lib consensi.fa.classified -dir . "$genome"
 
-    echo "Soft-masked genome saved to $masked_repeats_directory/${database}.softmasked.fasta"
+    # Extract soft-masked FASTA for BRAKER2
+    masked_file="$(basename "$genome").masked"
+    if [ -f "$masked_file" ]; then
+        cp "$masked_file" "$masked_repeats_directory/${database}.softmasked.fasta"
+        echo "Soft-masked genome saved to: $masked_repeats_directory/${database}.softmasked.fasta"
+    else
+        echo "ERROR: RepeatMasker did not produce the masked FASTA."
+        exit 1
+    fi
 
-    cd - >/dev/null #go back to previous directory
+    cd - > /dev/null  # Return to previous directory
 done
 
-date #lets you know the end time of script
+date  # Print end time of script
