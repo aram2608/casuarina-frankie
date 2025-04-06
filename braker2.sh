@@ -36,10 +36,9 @@ fi
 
 #run braker2
 braker.pl \
-    --species=casuarina_glauca \
+    --species=casuarina_glauca_v2 \
     --genome=$genome \
     --bam=$bam_list \
-    --softmasking \
     --workingdir=$output_directory \
     --cores=26 \
     --UTR=on
@@ -47,3 +46,15 @@ braker.pl \
 echo Finished annotating Casuarina glauca
 
 date #print the end time of script
+
+#run braker2
+#braker.pl \
+    #--species=casuarina_glauca \
+    #--genome=$genome \
+    #--bam=$bam_list \
+    #--softmasking \
+    #--workingdir=$output_directory \
+    #--cores=26 \
+    #--UTR=on
+
+#i tried these parameters last time and it failed, gonna retry with diff ones
