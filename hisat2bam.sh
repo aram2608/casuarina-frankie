@@ -26,23 +26,23 @@ mkdir -p $output_BAM_directory #makes directory just in case
 for trimmed_fastq in $trimmed_fastq_directory/*.fastq.gz; do #loop directory and search for zipped fastq files
     echo Starting alignment for $trimmed_fastq
     base_name=$(basename $trimmed_fastq) #extracts basename from input
-    output_SAM=$output_BAM_directory/${base_name%.fastq.gz}.sam #creates SAM file name from fastq file name
-    sorted_bam=sorted_$(basename $output_SAM .sam).bam
+    sorted_bam=$output_BAM_directory/${base_name}_sorted.bam #creates bam file name
 
+    #pipe for alignment and conversion to bam file, the sam file is no longer created as it is the immediate input for the pipe
     hisat2 --phred33 \
-    --dta \
-    -p 20 \
-    -x $input_index_hisat2 \
-    -U $trimmed_fastq \
-    -S $output_SAM
-
+        --dta \
+        -p 20 \
+        -x $input_index_hisat2 \
+        -U $trimmed_fastq \
+    | samtools view -@ 4 -Sb - \
+    | samtools sort -@ 4 -o $sorted_bam - \
+    | samtools index $sorted_bam -
+    #there can be no spaces or characters after a backslash or the pipe may fail
     #check if hisat2 command failed
     if [ $? -ne 0 ]; then
         echo "Failure for $trimmed_fastq alignment"
     else
-        echo "Converting $output_SAM to BAM"
-        samtools view -@ 20 -Sb $output_SAM | samtools sort -O bam -o $sorted_bam
-        rm $output_SAM
+        echo Created $sorted_bam succesfully
     fi
 done
 
