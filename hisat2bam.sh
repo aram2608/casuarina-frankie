@@ -35,14 +35,15 @@ for trimmed_fastq in $trimmed_fastq_directory/*.fastq.gz; do #loop directory and
         -x $input_index_hisat2 \
         -U $trimmed_fastq \
     | samtools view -@ 4 -Sb - \
-    | samtools sort -@ 4 -o $sorted_bam - \
-    | samtools index $sorted_bam -
+    | samtools sort -@ 4 -o $sorted_bam -
+
     #there can be no spaces or characters after a backslash or the pipe may fail
     #check if hisat2 command failed
     if [ $? -ne 0 ]; then
         echo "Failure for $trimmed_fastq alignment"
     else
         echo Created $sorted_bam succesfully
+        samtools index $sorted_bam #indexes the new bam files
     fi
 done
 
