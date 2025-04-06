@@ -11,6 +11,8 @@ if [ -z $trimmed_fastq_directory ] || [ -z $input_index_hisat2 ] || [ -z $output
     exit 1
 fi
 
+#make sure you input the index directory as ~/path/to/dir/casuarina
+
 #check index directory and make sure index file exist
 required_extensions=(1 2 3 4 5 6 7 8)
 for extension in ${required_extensions[@]}; do #loop through required extensions
