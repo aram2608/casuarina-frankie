@@ -42,7 +42,6 @@ braker.pl \
     --softmasking \
     --workingdir=$output_directory \
     --cores=26 \
-    --gff3 \
     --UTR=on
 
 echo Finished annotating Casuarina glauca
