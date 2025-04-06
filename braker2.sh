@@ -36,9 +36,10 @@ fi
 
 #run braker2
 braker.pl \
-    --species=casuarina_glauca_v2 \
+    --species=casuarina_glauca \
     --genome=$genome \
     --bam=$bam_list \
+    --softmasking \
     --workingdir=$output_directory \
     --cores=26 \
     --UTR=on
