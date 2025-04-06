@@ -4,3 +4,13 @@ This is a pipeline for analyzing 100 base-pair single-end Illumina reads for an 
 # Project Members
 Javier
 Matt
+
+# Software Used 💻
+
+- `FastQC`
+- `Trimmomatic`
+- `HISAT2`
+- `samtools`
+- `BRAKER2`
+- `AUGUSTUS`
+- `GeneMark-ET`
