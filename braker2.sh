@@ -1,61 +1,49 @@
 #!/bin/bash
 
-date #print start time
+date  #script start time
 
-bam_directory=$1 #directory for bam files
-genome=$2 #path to genome
-output_directory=$3 #output directory
+merged_bam="$1"         # Full path to merged BAM file
+genome="$2"             # Path to genome FASTA
+output_directory="$3"   # Output directory
 
-#check to ensure all args met
-if [ -z $bam_directory ] || [ -z $genome ] || [ -z $output_directory ]; then
-    echo "Usage: ./braker2.sh <bam_directory> <genome> <output_directory>"
+#argument check
+if [ -z "$merged_bam" ] || [ -z "$genome" ] || [ -z "$output_directory" ]; then
+    echo "Usage: ./braker2.sh <merged_bam> <genome> <output_directory>"
     exit 1
 fi
 
-#create a list of bam files separated by commas
-bam_list=$(ls "$bam_directory"/*.bam 2>/dev/null | paste -sd, -) #redirects file descriptor 2 to the unix trash can /dev/null
-
-#check for empty bam list
-if [ -z $bam_list ]; then
-    echo No BAM files found in $bam_directory
+#bam file validation
+if [ ! -f "$merged_bam" ]; then
+    echo "Merged BAM file not found: $merged_bam"
     exit 1
 fi
 
-#check to see if all bams included
-echo BAM list: $bam_list
+#bam index validation
+if [ ! -f "${merged_bam}.bai" ]; then
+    echo "BAM index not found: ${merged_bam}.bai"
+    echo "Generating index..."
+    samtools index "$merged_bam"
+fi
 
-#set genemark variable
+#genemark environment check
 export GENEMARK_PATH="/home/users/ja1473/gmes_linux_64_4"
 export GM_KEY="$GENEMARK_PATH/gm_key"
 
-#test to ensure genemark info is set
-if [ ! -f $GM_KEY ]; then
-    echo Missing GeneMark parameters
+if [ ! -f "$GM_KEY" ]; then
+    echo "Missing GeneMark key file"
     exit 1
 fi
 
-#run braker2
+#run BRAKER2
 braker.pl \
     --species=casuarina_glauca \
-    --genome=$genome \
-    --bam=$bam_list \
+    --useexisting \
+    --genome="$genome" \
+    --bam="$merged_bam" \
     --softmasking \
-    --workingdir=$output_directory \
+    --workingdir="$output_directory" \
     --cores=26 \
     --UTR=on
 
-echo Finished annotating Casuarina glauca
-
-date #print the end time of script
-
-#run braker2
-#braker.pl \
-    #--species=casuarina_glauca \
-    #--genome=$genome \
-    #--bam=$bam_list \
-    #--softmasking \
-    #--workingdir=$output_directory \
-    #--cores=26 \
-    #--UTR=on
-
-#i tried these parameters last time and it failed, gonna retry with diff ones
+echo "Finished annotating Casuarina glauca"
+date  #time to finish script
