@@ -4,8 +4,7 @@ date #print start time
 
 bam_directory=$1 #directory for bam files
 genome=$2 #path to genome
-gene_mark_key_dir=$3 #where the gene_mark key is
-output_directory=$4 #output directory
+output_directory=$3 #output directory
 
 #create a list of bam files to train all at once
 bam_list=$(ls "$bam_directory"/*.bam | paste -sd, -)
@@ -14,16 +13,16 @@ bam_list=$(ls "$bam_directory"/*.bam | paste -sd, -)
 echo BAM list: $bam_list
 
 #check to ensure all args met
-if [ -z $bam_directory ] || [ -z $genome ] || [ -z $gene_mark_key_dir ] || [ -z $output_directory ]; then
-    echo "Usage: ./braker2.sh <bam_directory> <genome> <gene_mark_key_dir> <output_directory>"
+if [ -z $bam_directory ] || [ -z $genome ] || [ -z $output_directory ]; then
+    echo "Usage: ./braker2.sh <bam_directory> <genome> <output_directory>"
     exit 1
 fi
 
-export GENEMARK_PATH=$gene_mark_key_dir
-export GM_KEY="$gene_mark_key_dir/gm_key"
+export GENEMARK_PATH="/home/users/ja1473/gmes_linux_64_4"
+export GM_KEY="/home/users/ja1473/gmes_linux_64_4/gm_key"
 
 #test to ensure genemark info is set
-if [ ! -f GENEMARK_PATH ] || [ ! -f $gm_key ]; then
+if [ ! -f $GM_KEY ]; then
     echo Missing GeneMark parameters
     exit 1
 fi
@@ -36,9 +35,9 @@ braker.pl \
     --softmasking \
     --workingdir=$output_directory \
     --cores=26 \
-    --gff3
+    --gff3 \
+    --UTR=on
 
-echo Finished annotating $sample_name
-
+echo Finished annotating Casuarina glauca
 
 date #print the end time of script
