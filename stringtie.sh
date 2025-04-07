@@ -5,29 +5,30 @@ bam_dir=$1 #input directory for bams
 output_dir=$2 #output directory for stringtie
 
 #a check to ensure args are met
-if [ -z $bam_dir ] || [ -z $output_dir ]; then
+if [ -z "$bam_dir" ] || [ -z "$output_dir" ]; then
     echo "Usage: ./stringtie.sh <bam_dir> <output_dir>"
     exit 1
 fi
 
 #makes directory just in case
-mkdir -p $output_dir
+mkdir -p "$output_dir"
 
 #loop for bam files
-for bam in $bam_dir/*.bam; do
+for bam in "$bam_dir"/*.bam; do
     #file name is crazy so chat said to do this
     sample=$(basename "$bam" | sed 's/\.fastq.*//; s/\.fq.*//; s/\.bam//')
-    echo Processing $sample
+    echo Processing "$sample"
 
     #stringtie params
     stringtie \
+        $bam \
         -p 20 \
-        -o $output_dir/${sample}.gtf \
-        -l $sample
+        -o "$output_dir/${sample}.gtf" \
+        -l "$sample"
 
     #safety check to ensure command ran properly
     if [ $? -ne 0 ]; then
-        echo Failure in processing $sample >> $output_dir/failurelog.txt
+        echo Failure in processing "$sample" >> "$output_dir/failurelog.txt"
     fi
 done
 

@@ -36,8 +36,7 @@ fi
 
 #run BRAKER2
 braker.pl \
-    --species=casuarina_glauca \
-    --useexisting \
+    --species=casuarina_glauca_vv \
     --genome="$genome" \
     --bam="$merged_bam" \
     --softmasking \
