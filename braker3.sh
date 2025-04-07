@@ -25,15 +25,6 @@ if [ ! -f "${merged_bam}.bai" ]; then
     samtools index "$merged_bam"
 fi
 
-#genemark environment check
-export GENEMARK_PATH="/home/users/ja1473/gmes_linux_64_4"
-export GM_KEY="$GENEMARK_PATH/gm_key"
-
-if [ ! -f "$GM_KEY" ]; then
-    echo "Missing GeneMark key file"
-    exit 1
-fi
-
 #run BRAKER2
 braker.pl \
     --species=casuarina_glauca_new \
