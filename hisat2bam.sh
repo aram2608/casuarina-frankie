@@ -34,6 +34,7 @@ for trimmed_fastq in $trimmed_fastq_directory/*.fastq.gz; do #loop directory and
     hisat2 --phred33 \
         --dta \
         -p 20 \
+        --rna-strandness R \
         -x $input_index_hisat2 \
         -U $trimmed_fastq \
     | samtools view -@ 4 -Sb - \
@@ -57,3 +58,4 @@ date #tells you how longs the program has run
 #-p 20 uses 20 threads
 #-x is for index directory
 #-S is for output sam file
+#--rna-strandness 'R' #option to include strandness of reads
