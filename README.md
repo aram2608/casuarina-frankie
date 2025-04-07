@@ -2,8 +2,8 @@
 This is a pipeline for analyzing 100 base-pair single-end Illumina reads for an experiment involving the actinorhizal plant, Casuarina glauca.
 
 # Project Members
-Javier
-Matt
+- Javier
+- Matt
 
 # Software Used 💻
 
@@ -19,3 +19,5 @@ Matt
 - `EVM` maybe could use `GINGER` instead
 - `HTSeq v 2.0.5`
 - `DESeq2 v 3.20`
+
+# Introduction
