@@ -23,6 +23,7 @@ for bam in "$bam_dir"/*.bam; do
     stringtie \
         $bam \
         -p 20 \
+        -rf \
         -o "$output_dir/${sample}.gtf" \
         -l "$sample"
 
@@ -33,3 +34,5 @@ for bam in "$bam_dir"/*.bam; do
 done
 
 date #print end time of script
+
+#added -rf flag for reverse strandness of my reads

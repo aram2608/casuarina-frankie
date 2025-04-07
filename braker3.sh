@@ -4,7 +4,7 @@ date  #script start time
 
 merged_bam="$1"         #full path to merged BAM file
 genome="$2"             #path to genome FASTA
-stringtie_dir=$3        #merged gtf file directory
+transcript_gtf=$3        #merged gtf file directory
 output_directory="$4"   #output directory
 
 #argument check
