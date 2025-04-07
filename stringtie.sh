@@ -15,7 +15,8 @@ mkdir -p $output_dir
 
 #loop for bam files
 for bam in $bam_dir/*.bam; do
-    sample=$(basename $bam .bam)
+    #file name is crazy so chat said to do this
+    sample=$(basename "$bam" | sed 's/\.fastq.*//; s/\.fq.*//; s/\.bam//')
     echo Processing $sample
 
     #stringtie params
