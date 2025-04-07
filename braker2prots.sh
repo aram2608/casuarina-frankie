@@ -3,7 +3,7 @@
 date  #script start time
 
 merged_bam="$1"         #full path to merged BAM file
-genome="$2"             #path to genome FASTA
+$protein_fasta="$2"     #path to protein FASTA
 output_directory="$3"   #output directory
 
 #argument check
@@ -27,10 +27,9 @@ fi
 
 #run BRAKER2
 braker.pl \
-    --species=casuarina_glauca_rna \
+    --species=casuarina_glauca_prot \
     --genome="$genome" \
-    --bam="$merged_bam" \
-    --stranded=- \
+    --prot_seq="$protein_fasta" \
     --softmasking \
     --workingdir="$output_directory" \
     --gff3 \
