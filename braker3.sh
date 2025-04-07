@@ -4,8 +4,7 @@ date  #script start time
 
 merged_bam="$1"         #full path to merged BAM file
 genome="$2"             #path to genome FASTA
-transcript_gtf=$3        #merged gtf file directory
-output_directory="$4"   #output directory
+output_directory="$3"   #output directory
 
 #argument check
 if [ -z "$merged_bam" ] || [ -z "$genome" ] || [ -z $stringtie_dir ] || [ -z "$output_directory" ]; then
@@ -37,10 +36,10 @@ fi
 
 #run BRAKER2
 braker.pl \
-    --species=casuarina_glauca \
-    --etmode \
+    --species=casuarina_glauca_new \
     --genome="$genome" \
     --bam="$merged_bam" \
+    --stranded=yes \
     --softmasking \
     --workingdir="$output_directory" \
     --cores=26 \
@@ -48,3 +47,5 @@ braker.pl \
 
 echo "Finished annotating Casuarina glauca"
 date  #time to finish script
+
+#added strandness flag
