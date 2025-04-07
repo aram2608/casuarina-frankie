@@ -16,7 +16,7 @@ mkdir -p "$trinity_output"
 
 #trinity params
 Trinity \
-    --max_memory 50g \
+    --max_memory 300G \
     --genome_guided_bam "$merged_sorted_bam" \
     --output "$trinity_output" \
     --SS_lib_type R \
@@ -34,3 +34,4 @@ date #end time of script
 #SS_lib details strand direction
 #cpu is for resource usage
 #genome_guided_max this is to tell max intron, according to literature 10k is fine for plants
+#about 1G per million reads, so about 3 million reads for this script
