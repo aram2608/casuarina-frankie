@@ -15,7 +15,7 @@ fi
 mkdir -p "$trinity_output"
 
 #trinity params
-trinity \
+Trinity \
     --max_memory 50g \
     --genome_guided_bam "$merged_sorted_bam" \
     --output "$trinity_output" \
@@ -26,3 +26,11 @@ trinity \
 echo "Finished processing of files"
 
 date #end time of script
+
+#trinity params
+#max memory manages resources, edit if fails
+#genome_guided uses rna seq that has been aligned
+#output is for output directory
+#SS_lib details strand direction
+#cpu is for resource usage
+#genome_guided_max this is to tell max intron, according to literature 10k is fine for plants
