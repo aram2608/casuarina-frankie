@@ -15,8 +15,8 @@ This is a pipeline for analyzing 100 base-pair single-end Illumina reads for an 
 - `AUGUSTUS v 3.4.0`
 - `GeneMark-ET v 4.72_lic`
 - `StringTie v 2.2.3`
-- `PASA v 2.5.3`
-- `EVM` maybe could use `GINGER` instead
+- `TransDecoder v 5.7.1`
+- `GINGER`
 - `HTSeq v 2.0.5`
 - `DESeq2 v 3.20`
 
