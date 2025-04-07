@@ -7,10 +7,15 @@ Matt
 
 # Software Used 💻
 
-- `FastQC`
-- `Trimmomatic`
-- `HISAT2`
-- `samtools`
-- `BRAKER2`
-- `AUGUSTUS`
-- `GeneMark-ET`
+- `FastQC v 0.12.1`
+- `Trimmomatic v 0.39`
+- `HISAT2 v 2.2.1`
+- `samtools v 1.18`
+- `BRAKER2 v 2.1.6`
+- `AUGUSTUS v 3.4.0`
+- `GeneMark-ET v 4.72_lic`
+- `StringTie v 2.2.3`
+- `PASA v 2.5.3`
+- `EVM` maybe could use `GINGER` instead
+- `HTSeq v 2.0.5`
+- `DESeq2 v 3.20`
