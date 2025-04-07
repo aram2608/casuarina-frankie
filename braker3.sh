@@ -7,7 +7,7 @@ genome="$2"             #path to genome FASTA
 output_directory="$3"   #output directory
 
 #argument check
-if [ -z "$merged_bam" ] || [ -z "$genome" ] || [ -z $stringtie_dir ] || [ -z "$output_directory" ]; then
+if [ -z "$merged_bam" ] || [ -z "$genome" ] || [ -z "$output_directory" ]; then
     echo "Usage: ./braker3.sh <merged_bam> <genome> <output_directory>"
     exit 1
 fi
@@ -39,7 +39,7 @@ braker.pl \
     --species=casuarina_glauca_new \
     --genome="$genome" \
     --bam="$merged_bam" \
-    --stranded=yes \
+    --stranded=- \
     --softmasking \
     --workingdir="$output_directory" \
     --gff3 \
@@ -51,3 +51,4 @@ date  #time to finish script
 
 #added strandness flag
 #added gff3 for evm
+#--stranded=- for reverse
