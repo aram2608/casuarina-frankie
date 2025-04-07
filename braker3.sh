@@ -42,6 +42,7 @@ braker.pl \
     --stranded=yes \
     --softmasking \
     --workingdir="$output_directory" \
+    --gff3 \
     --cores=26 \
     --UTR=on
 
@@ -49,3 +50,4 @@ echo "Finished annotating Casuarina glauca"
 date  #time to finish script
 
 #added strandness flag
+#added gff3 for evm
