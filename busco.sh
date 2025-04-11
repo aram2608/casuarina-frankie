@@ -1,21 +1,28 @@
 #!/bin/bash
 
-input_GTF=$1 # input file to GTF file ---- /full/path/to/file
-output_file=$(basename $input_GTF .gtf)_busco_fabales # output file name extraction from basename
+input_GTF_protein_dir=$1 # input file to GTF file ---- /full/path/to/file
+output_dir_1=$(basename "$input_GTF_protein_dir" .gtf)_busco_fabales # output dir
+output_dir_2=$(basename "$input_GTF_protein_dir" .gtf)_busco_eudicots # output dir
 
 # safety check to make sure args are met
-if [ ! -f "$input_GTF" ]; then
+if [ -z "$input_GTF_protein_dir" ]; then
     echo "Usage: <input_GTF>"
     exit
 fi
 
-# busco run parameters
-busco -i braker_proteins.faa \
-    -l fabales_odb10 \
-    -o "$output_file" \
-    -m protein
+for prot_GTF in $input_GTF_protein_dir/*.faa; do
+    # busco run parameters
+    busco -i "$prot_GTF" \
+        -l fabales_odb10 \
+        -o "$output_dir_1" \
+        -m protein
 
-echo "Finished checking quality of $input_GTF"
+    busco -i "$prot_GTF" \
+        -l eudicots_odb10 \
+        -o "$output_dir_2" \
+        -m protein
+
+echo "Finished checking quality of $prot_GTF"
 
 # important params to know for working with casuarina
 # -l fabales_odb10 # most biologically relevant, legumes like medicago
