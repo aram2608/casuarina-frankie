@@ -59,3 +59,4 @@ date #tells you how longs the program has run
 #-x is for index directory
 #-S is for output sam file
 #--rna-strandness 'R' #option to include strandness of reads
+# potentially useful flag --summary-file for summaries of alignments
