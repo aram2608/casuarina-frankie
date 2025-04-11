@@ -8,28 +8,24 @@ if [ -z "$protein_dir" ]; then
     exit
 fi
 
-# lopping through protein directory
+# looping through protein directory
 for prot_GTF in "$protein_dir"/*.faa; do
-    #creating output directories
+    # creating output directories
     base_name=$(basename "$prot_GTF" .faa)
 
     output_dir_1="${base_name}_busco_fabales"
     output_dir_2="${base_name}_busco_eudicots"
-    # busco run parameters
-    busco -i "$prot_GTF" \
-        -l fabales_odb10 \
-        -o "$output_dir_1" \
-        -m protein
+    output_dir_3="${base_name}_busco_embryophyta"
 
-    busco -i "$prot_GTF" \
-        -l eudicots_odb10 \
-        -o "$output_dir_2" \
-        -m protein
+    # busco run parameters
+    busco -i "$prot_GTF" -l fabales_odb10 -o "$output_dir_1" -m protein
+    busco -i "$prot_GTF" -l eudicots_odb10 -o "$output_dir_2" -m protein
+    busco -i "$prot_GTF" -l embryophyta_odb10 -o "$output_dir_3" -m protein
 
     echo "Finished checking quality of $prot_GTF"
 done
 
 # important params to know for working with casuarina
-# -l fabales_odb10 # most biologically relevant, legumes like medicago
-# -l eudicots_odb10 # eudicots a lot braoder and more general
+# -l fabales_odb10    # most biologically relevant, legumes like medicago
+# -l eudicots_odb10   # eudicots a lot broader and more general
 # -l embryophyta_odb10 # all land plants, a lot more general
