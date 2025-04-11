@@ -27,6 +27,7 @@ for prot_GTF in "$protein_dir"/*.faa; do
         -m protein
 
     echo "Finished checking quality of $prot_GTF"
+done
 
 # important params to know for working with casuarina
 # -l fabales_odb10 # most biologically relevant, legumes like medicago
