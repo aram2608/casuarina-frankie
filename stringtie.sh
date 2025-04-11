@@ -26,11 +26,7 @@ for bam in "$bam_dir"/*.bam; do
         --rf \
         -o "$output_dir/${sample}.gtf" \
         -l "$sample"
-
-    #safety check to ensure command ran properly
-    if [ $? -ne 0 ]; then
-        echo Failure in processing "$sample" >> "$output_dir/failurelog.txt"
-    fi
+    echo "finished processing $bam"
 done
 
 date #print end time of script
