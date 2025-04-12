@@ -1,28 +1,26 @@
 #!/bin/bash
 
-input_bams_file=$1 # file with names of bam files
+input_bams_dir=$1 # directory with names of bam files
 annotation_file=$2 # file with annotations in GTF format
 output_dir=$3 # output directory for count matrix
 
 # safety check for input file
-if [ ! -f "$input_bams_file" ] || [ ! -f "$annotation_file" ]; then
-    echo "Usage: <input_bam_txt_file>"
+if [ -z "$input_bams_dir" ] || [ ! -d "$input_bams_dir" ] || [ ! -f "$annotation_file" ]; then
+    echo "Usage: <input_bam_txt_directory <gtf_file>"
     exit 1
 fi
 
 # makes the output dir just in case
 mkdir -p $output_dir
 
-# creates a base name for the output file
-base_name=$(basename $input_bam_txt_file .txt)
-
 # params for featurecounts run
 featureCounts -s 2 \
+    -T 8 \
     -t exon \
     -g gene_id \
     -a "$annotation_file" \
-    -o "$output_dir"/${base_name}_counts.txt \
-    $input_bam_txt_file
+    -o "$output_dir"/feature_counts.txt \
+    "$input_bams_dir"/*.bam
 
 echo "Finished calculating counts"
 
@@ -31,6 +29,5 @@ echo "Finished calculating counts"
 # -s tells you strandness of rna, 2 is reverse
 # -a is for annotation files, GTF
 # -o is for output
+# -T is for adding threads
 # the input bam file is postional
-
-# !!! Make sure this script is run in the same directory as the bam files
