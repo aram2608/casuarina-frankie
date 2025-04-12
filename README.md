@@ -19,8 +19,7 @@ This is a pipeline for analyzing 100 base-pair single-end Illumina reads for an 
 
 # Pipeline Schematic
 
-<img width="753" alt="Screenshot 2025-04-11 at 10 00 51 PM" src="https://github.com/user-attachments/assets/a2d93474-ed3f-4f20-a846-15450f4749f2" />
-<img width="748" alt="Screenshot 2025-04-11 at 10 01 00 PM" src="https://github.com/user-attachments/assets/b6a12004-f63e-4585-baa0-b6c044e56f1f" />
-
+<img width="751" alt="Screenshot 2025-04-12 at 11 50 26 AM" src="https://github.com/user-attachments/assets/9fff82d4-d821-49c8-b585-5d195fbdd577" />
+<img width="748" alt="Screenshot 2025-04-12 at 11 50 34 AM" src="https://github.com/user-attachments/assets/6ee20e14-a602-47ea-9c75-947cf702edae" />
 
 # Introduction
