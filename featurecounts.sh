@@ -17,8 +17,8 @@ mkdir -p $output_dir
 base_name=$(basename $input_bam_txt_file .txt)
 
 # params for featurecounts run
-featurecounts -s 2 \
-    exon \
+featureCounts -s 2 \
+    -t exon \
     -g gene_id \
     -a "$annotation_file" \
     -o "$output_dir"/${base_name}_counts.txt \
