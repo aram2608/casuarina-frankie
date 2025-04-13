@@ -9,11 +9,11 @@ if (!require("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 BiocManager::install("DESeq2")
 # install CRAN packages
-install.packages("tidyverse")
+install.packages("ggplot2")
 install.packages("pheatmap")
 # load libraries
 library("DESeq2")
-library("tidyverse") #ggplot2 tidyr tibble
+library("ggplot2") #ggplot2 tidyr tibble
 library("pheatmap")
 
 ### IMPORTING DATA ###
@@ -44,7 +44,7 @@ dds$Treatment <- relevel(dds$Treatment, ref = "control")
 # prints the dataframe i suppose?
 dds
 # performs DEG
-dds <- DEseq(dds)
+dds <- DESeq(dds)
 # creates a results dataframe
 results <- results(dds)
 # prints results
@@ -56,8 +56,15 @@ resultsNames(dds)
 
 # PCA PLOT
 # transformation using VST
-vsd <- vst(dds, bilnd = TRUE)
-plotPCA(vsd, intgroup = c("Treatment"))
+vsd <- vst(dds, blind = TRUE)
+pca_data <- plotPCA(vsd, intgroup = c("Treatment"), returnData = TRUE)
+percent_var <- round(100 * attr(pca_data, "percentVar"))
+# plotting using ggplot
+ggplot(pca_data, aes(PC1, PC2, color = Treatment)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percent_var[1], "% variance")) +
+  ylab(paste0("PC2: ", percent_var[2], "% variance")) +
+  coord_fixed()
 
 # plots a volcano plot looking thing
 plotMA(results, ylim = c(-2, 2)) # volcano plot?
