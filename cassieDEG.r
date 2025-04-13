@@ -59,12 +59,23 @@ resultsNames(dds)
 vsd <- vst(dds, blind = TRUE)
 pca_data <- plotPCA(vsd, intgroup = c("Treatment"), returnData = TRUE)
 percent_var <- round(100 * attr(pca_data, "percentVar"))
+
 # plotting using ggplot
 ggplot(pca_data, aes(PC1, PC2, color = Treatment)) +
-  geom_point(size = 3) +
+  geom_point(size = 3, alpha = 0.8) +
   xlab(paste0("PC1: ", percent_var[1], "% variance")) +
   ylab(paste0("PC2: ", percent_var[2], "% variance")) +
-  coord_fixed()
+  coord_fixed() +
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(color = "black"),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank()
+  )
 
-# plots a volcano plot looking thing
-plotMA(results, ylim = c(-2, 2)) # volcano plot?
+# plots an MA plot, another way to see quality
+plotMA(results, ylim = c(-2, 2))
