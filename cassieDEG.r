@@ -6,20 +6,13 @@
 ### REQUIRED PACKAGES ###
 
 # install bioconductor packages
-if (!require("BiocManager", quietly = TRUE))
+if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
-BiocManager::install("DESeq2")
-
-# install CRAN packages
-install.packages("ggplot2")
-install.packages("pheatmap")
-install.packages("ggVennDiagram")
+if (!requireNamespace("DESEq2", quietly = TRUE))
+  BiocManager::install("DESeq2")
 
 # load libraries
 library("DESeq2")
-library("ggplot2")
-library("pheatmap")
-library("ggVennDiagram")
 
 ### IMPORTING DATA ###
 
