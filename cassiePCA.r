@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 
-### RUN THIS FIEST AFTER DEG TO ENSURE QUALITY ###
+### RUN THIS FIRST AFTER DEG TO ENSURE QUALITY ###
 
-### PAQUETAS NECESARIOS ###
+### NECESSARY PACKAGES ###
 
 # install bioconductor packages
 if (!require("BiocManager", quietly = TRUE))
@@ -26,7 +26,7 @@ pca_data <- plotPCA(vsd, intgroup = c("Treatment"), returnData = TRUE)
 percent_var <- round(100 * attr(pca_data, "percentVar"))
 
 # PCA plotting using ggplot2
-p <- ggplot(pca_data, aes(PC1, PC2, color = Treatment)) +
+pca <- ggplot(pca_data, aes(PC1, PC2, color = Treatment)) +
   geom_point(size = 3, alpha = 0.8) +
   xlab(paste0("PC1: ", percent_var[1], "% variance")) +
   ylab(paste0("PC2: ", percent_var[2], "% variance")) +
@@ -43,4 +43,4 @@ p <- ggplot(pca_data, aes(PC1, PC2, color = Treatment)) +
   )
 
 # save plot as a png
-ggsave("DEG_results/pca_plot.png", plot = p, width = 6, height = 6, dpi = 300)
+ggsave("DEG_results/pca_plot.png", plot = pca, width = 6, height = 6, dpi = 300)

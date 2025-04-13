@@ -3,15 +3,15 @@
 ### RUN THIS AFTER PCA ###
 ### CREATES NECESSARY DATA FRAMES FOR FURTHER PLOTS ###
 
-### PAQUETES NECESARIOS ###
+### NECESSARY PACKAGES ###
 
 # installing CRAN packages
 if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 if (!requireNamespace("ggVennDiagram", quietly = TRUE))
   install.packages("ggVennDiagram")
-if (!requireNamespace('ggplo2', quietly = TRUE))
-  install.packages('ggplot2')
+if (!requireNamespace("ggplo2", quietly = TRUE))
+  install.packages("ggplot2")
 # install bioconductor packages
 if (!requireNamespace("DESeq2", quietly = TRUE))
   BiocManager::install("DESeq2")
@@ -26,7 +26,6 @@ dir.create("DEG_results", showWarnings = FALSE)
 
 # list to store genes
 comparisons <- resultsNames(dds)[-1]
-
 upregulated_genes <- list()
 downregulated_genes <- list()
 all_degs <- list()
@@ -43,16 +42,9 @@ for (comp in comparisons) {
   upregulated_genes[[comp]] <- up
   downregulated_genes[[comp]] <- down
   all_degs[[comp]] <- all
-
-  # Exportar resultados
-  write.csv(as.data.frame(res), file = paste0("DEG_results/", comp, "_full_results.csv"))
-  write.csv(up, file = paste0("DEG_results/", comp, "_upregulated.csv"), row.names = FALSE)
-  write.csv(down, file = paste0("DEG_results/", comp, "_downregulated.csv"), row.names = FALSE)
-  write.csv(all, file = paste0("DEG_results/", comp, "_all_sig.csv"), row.names = FALSE)
 }
 
 # plot diagrams for up, down, and all genes
-
 # upreg genes
 ggVennDiagram(upregulated_genes, label_alpha = 0, edge_size = 0.5) +
   scale_fill_gradient(low = "white", high = "red") +
@@ -70,6 +62,6 @@ ggsave("DEG_results/downregulated_venn.png", width = 6, height = 6, dpi = 300)
 # todos los genes arriba y abajo
 ggVennDiagram(all_degs, label_alpha = 0, edge_size = 0.5) +
   scale_fill_gradient(low = "white", high = "darkgreen") +
-  labs(title = "Todos los genes diferencialmente expresados (padj < 0.05)") +
+  labs(title = "All Differentially Expressed Genes") +
   theme(text = element_text(size = 14))
 ggsave("DEG_results/all_DEGs_venn.png", width = 6, height = 6, dpi = 300)
