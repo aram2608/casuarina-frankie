@@ -1,37 +1,38 @@
+#!/usr/bin/env Rscript
+
+### THESE VALUES ARE HARD CODED ###
+### MAKE SURE TO CHANGE IF RE-USING ###
+
+### REQUIRED PACKAGES ###
 # install bioconductor packages
 if (!require("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 BiocManager::install("DESeq2")
-
 # install CRAN packages
 install.packages("tidyverse")
 install.packages("pheatmap")
-
 # load libraries
 library("DESeq2")
 library("tidyverse") #ggplot2 tidyr tibble
 library("pheatmap")
 
+### IMPORTING DATA ###
 # analyzing count matrix
 featurecounts_raw <- read.delim("feature_counts.txt",
                                 sep = "\t",
                                 header = TRUE) # import feature_counts
 cleanfeatures <- featurecounts_raw[-c(2, 3, 4, 5, 6)] # clean up columns
-
 # set column names
 counts <- cleanfeatures[, -1]
 rownames(counts) <- cleanfeatures[, 1]
-
 # import column data
 coldata <- read.csv("coldata.csv", header = TRUE)
-
 # set row names for coldata
 rownames(coldata) <- coldata$X
-
 # test to see if columns and rows match
 all(rownames(coldata) == colnames(counts)) # should be true
 
-# DEG
+### DEG ANALYSIS ###
 # creates a DeseqDataSet or DDS
 dds <- DESeqDataSetFromMatrix(countData = counts,
                               colData = coldata,
@@ -50,5 +51,13 @@ results <- results(dds)
 results
 # prints summary of results
 summary(results)
+# prints pairwise comparisons,useful double check
+resultsNames(dds)
+
+# PCA PLOT
+# transformation using VST
+vsd <- vst(dds, bilnd = TRUE)
+plotPCA(vsd, intgroup = c("Treatment"))
+
 # plots a volcano plot looking thing
 plotMA(results, ylim = c(-2, 2)) # volcano plot?
