@@ -10,6 +10,8 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 if (!requireNamespace("ggVennDiagram", quietly = TRUE))
   install.packages("ggVennDiagram")
+if (!requireNamespace('ggplo2', quietly = TRUE))
+  install.packages('ggplot2')
 # install bioconductor packages
 if (!requireNamespace("DESeq2", quietly = TRUE))
   BiocManager::install("DESeq2")
@@ -17,6 +19,7 @@ if (!requireNamespace("DESeq2", quietly = TRUE))
 # load libraries
 library("DESeq2")
 library("ggVennDiagram")
+library("ggplot2")
 
 # creates an output directory
 dir.create("DEG_results", showWarnings = FALSE)
