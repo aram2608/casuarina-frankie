@@ -14,6 +14,7 @@ if (!requireNamespace("DESeq2", quietly = TRUE))
 if (!requireNamespace("ggplot2", quietly = TRUE))
   install.packages("ggplot2")
 
+# load packages
 library("DESeq2")
 library("ggplot2")
 
