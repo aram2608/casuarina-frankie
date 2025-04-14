@@ -37,7 +37,7 @@ for (comp in comparisons) {
 
   up <- rownames(sig[sig$log2FoldChange > 1.5, ]) # filter for up-reg 1.5
   down <- rownames(sig[sig$log2FoldChange < -1.5, ]) # filter for down-red -1.5
-  all <- rownames(sig) # collect of DEGs
+  all <- rownames(sig) # collection of DEGs
 
   upregulated_genes[[comp]] <- up # compile upregulated
   downregulated_genes[[comp]] <- down # compile downregulated
