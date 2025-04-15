@@ -22,7 +22,7 @@ featurecounts_raw <- read.delim("feature_counts.txt",
                                 header = TRUE) # import feature_counts
 cleanfeatures <- featurecounts_raw[-c(2, 3, 4, 5, 6)] # clean up columns
 
-# set column names
+# set row names
 counts <- cleanfeatures[, -1]
 rownames(counts) <- cleanfeatures[, 1]
 

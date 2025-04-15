@@ -2,6 +2,9 @@
 
 ### Calculates Spearman's Coefft ###
 
+# load libraries
+library("dplyr")
+
 # Extract normalized counts
 normalized_counts <- counts(dds, normalized = TRUE)
 

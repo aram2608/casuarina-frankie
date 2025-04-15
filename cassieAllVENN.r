@@ -44,15 +44,17 @@ all_venn <- ggVennDiagram(all_degs, label_alpha = 0, edge_size = 0.5,
                                              "Cells vs. Control 48H",
                                              "NINA vs. Control 24H",
                                              "NINA vs. Countrol 48H")) +
-  scale_fill_distiller(palette = "Spectral") +
-  labs(title = "All Differentially Expressed Genes") +
-  theme(text = element_text(size = 14))
+  scale_fill_distiller(palette = "Set2") +
+  labs(title = "Differentially Expressed Genes Per Group",
+       caption = "p-value < 0.05 and 1.5 Log2FC") +
+  theme(text = element_text(size = 10),
+        title = element_text(size = 14))
 
 # saves the plot??
 all_venn
 
 # fixes the long labels
-all_venn + scale_x_continuous(expand = expansion(mult = .2))
+all_venn + scale_x_continuous(expand = expansion(mult = .5))
 
 ggsave("DEG_results/all_DEGs_venn.png",
        plot = all_venn, width = 6, height = 6, dpi = 300)
