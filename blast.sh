@@ -31,3 +31,7 @@ echo "Finished processesing $sequences: new file = blastp_10hits.tsv"
 # -db is the database to be used
 # -outfmt = produces tabular format
 # -num_alignments = sets the number of alignments for hits
+
+# use the following command to download a database
+# update_blastdb.pl --decompress nr [*]
+# in this case it will be the non-redundant database
