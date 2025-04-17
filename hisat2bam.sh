@@ -60,3 +60,8 @@ date #tells you how longs the program has run
 #-S is for output sam file
 #--rna-strandness 'R' #option to include strandness of reads
 # potentially useful flag --summary-file for summaries of alignments
+
+# extra note for future self
+# to build an index use this command
+# hisat2-build -p 16 input_genome.fa output_name
+#this builds HFM indexes
