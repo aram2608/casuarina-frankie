@@ -64,4 +64,4 @@ date #tells you how longs the program has run
 # extra note for future self
 # to build an index use this command
 # hisat2-build -p 16 input_genome.fa output_name
-#this builds HFM indexes
+# this builds HFM indexes
