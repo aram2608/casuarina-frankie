@@ -70,7 +70,7 @@ The resulting counts matrix from `featurecounts` could now finally be used for d
 
 # Results
 
-![pca_plot](https://github.com/user-attachments/assets/6ebe2502-d004-47d1-a1fe-afca9191c3d1)
+![pca_plot](https://github.com/user-attachments/assets/34bb8098-51f3-4892-8a23-43080b40a20d)
 
 ![all_DEGs_venn](https://github.com/user-attachments/assets/9097d032-825b-4cdd-ace4-16d262c503eb)
 
