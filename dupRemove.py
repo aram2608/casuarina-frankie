@@ -6,13 +6,13 @@ def remove_duplicate_fasta(input_txt, output_txt):
     original_count = len(df)
 
     # Create base ID by removing isoform suffix
-    df['base_id'] = df['query'].apply(lambda x: x.rsplit('.', 1)[0])
+    df['base_id'] = df['qseqid'].apply(lambda x: x.rsplit('.', 1)[0])
 
     # Keep only one entry per base gene
     df_unique = df.drop_duplicates(subset='base_id', keep='first')
 
     # Replace the query field with the cleaned ID
-    df_unique.loc[:, 'query'] = df_unique['base_id']
+    df_unique.loc[:, 'qseqid'] = df_unique['base_id']
     df_unique = df_unique.drop(columns=['base_id'])
 
     new_count = len(df_unique)

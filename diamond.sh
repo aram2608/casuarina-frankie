@@ -1,15 +1,27 @@
 #!/bin/bash
 
 input_seq=$1 # full path to sequences 
-$data_base_dir=$2 #full path to database, example = ~/path/to/swissprot ---- no extension needed
+data_base=$2 #full path to database, example = ~/path/to/swissprot ---- no extension needed
+diamond_path=$3 # path to diamond binaries example = ~/path/to/diamond
+output_path=$4 # path to desired output diretory
 
-# diamond params
+# safety check for arguments
+if [ ! -f $input_seq ] || [ -z $data_base_dir ] || [ -z $diamond_path ] || [ -z $output_path ]; then
+    echo "Usage: <input_to_sequences> <database_path> <path_to_diamond_binaries> <output_path>"
+    exit 1
+fi
 
+# makes output just in case
+mkdir -p $output_path
+
+# diamond params for a protein blast search
 ./diamond blastp \
-    -d swissprot \
-    -q $input_seq \
-    --outfmt 6 qseqid sseqid qlen slen qstart qend sstart send length pident positive mismatch gaps evalue bitscore qcovs \
-    -p 12
+    -d "$data_base" \
+    -q "$input_seq" \
+    --evalue 1e-5 \
+    --max-target-seqs 1 \
+    --outfmt 6 qseqid sseqid pident pident length mismatch gapopen evalue bitscore stitle \
+    -p 15 >> "$output_path"/diamond_output.txt
 
 # downloading the tool
 # wget http://github.com/bbuchfink/diamond/releases/download/v2.1.11/diamond-linux64.tar.gz
