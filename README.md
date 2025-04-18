@@ -70,9 +70,9 @@ The resulting counts matrix from `featurecounts` could now finally be used for d
 
 # Results
 
-![pca_plot](https://github.com/user-attachments/assets/dd72a930-7d6e-4d7e-9497-c593566e3f82)
+![pca_plot](https://github.com/user-attachments/assets/6ebe2502-d004-47d1-a1fe-afca9191c3d1)
 
-![all_DEGs_venn](https://github.com/user-attachments/assets/a183b457-e19f-473f-8390-1027b1506fba)
+![all_DEGs_venn](https://github.com/user-attachments/assets/9097d032-825b-4cdd-ace4-16d262c503eb)
 
 ![volc_cells_24](https://github.com/user-attachments/assets/4256c84e-2c46-441a-a5ff-32a658f2f4a1)
 
