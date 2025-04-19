@@ -19,6 +19,7 @@ blastp -query $sequences \
     -db nr \
     -outfmt '6 qseqid sseqid qlen slen qstart qend sstart send length pident positive mismatch gaps evalue bitscore qcovs' \
     -num_alignments 10 \
+    -num_threads 12 \
     -out "$output/blastp_10hits.out"
 
 echo -e 'qseqid\tsseqid\tqlen\tslen\tqstart\tqend\tsstart\tsend\tlength\tpident\tpositive\tmismatch\tgaps\tevalue\tbitscore\tqcovs' > "$output/header1.tab"
@@ -35,3 +36,6 @@ echo "Finished processesing $sequences: new file = blastp_10hits.tsv"
 # use the following command to download a database
 # update_blastdb.pl --decompress nr [*]
 # in this case it will be the non-redundant database
+
+# ron path
+# /home/share/databases/ncbi_nr/nr

@@ -15,7 +15,7 @@ fi
 mkdir -p $output_path
 
 # diamond params for a protein blast search
-./diamond blastp \
+$diamond_path/./diamond blastp \
     -d "$data_base" \
     -q "$input_seq" \
     --evalue 1e-5 \
@@ -33,3 +33,6 @@ mkdir -p $output_path
 
 # creating a diamond-formatted database file
 # ./diamond makedb --in reference.fasta -d reference
+
+# ron path
+# /home/share/databases/ncbi_nr/nr

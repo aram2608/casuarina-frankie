@@ -8,9 +8,9 @@ if [ -z "$input_seqs" ] || [ "$interpro_path" ]; then
     echo "Usage: <input_sequences> <path_to_interpro_binaries>"
 
 # interpro search for pathways and goterms
-./interproscan.sh -i "$input_seqs" \
+$interpro_path/./interproscan.sh -i "$input_seqs" \
     -goterms \
     -pa \
-    -cpu 15 > "$output_dir"/matches.txt
+    -cpu 15
 
 echo "Finished annotating $input_seqs"
