@@ -20,9 +20,7 @@ def remove_duplicate_fasta(input_txt, output_txt, geneID):
         geneID_index = int(geneID)
         gene_col = df.columns[geneID_index]
     except ValueError:
-        gene_col = geneID
-        if gene_col not in df.columns:
-            raise ValueError(f"Column '{gene_col}' not found. Available columns: {list(df.columns)}")
+        raise ValueError(f"Column '{gene_col}' not found. Available columns: {list(df.columns)}")
     except IndexError:
         raise IndexError(f"Column index {geneID_index} is out of bounds. File has {len(df.columns)} columns.")
 
