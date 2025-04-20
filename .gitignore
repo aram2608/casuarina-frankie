@@ -172,3 +172,14 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Tool outputs
+.fastqz
+.bam
+.sam
+.gtf
+.gff
+.tsv
+.RData
+.Rhistory
+.Rproj
