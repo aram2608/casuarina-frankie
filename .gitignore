@@ -179,3 +179,7 @@ cython_debug/
 .sam
 .gtf
 .gff
+.tsv
+.RData
+.Rhistory
+.Rproj
