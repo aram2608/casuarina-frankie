@@ -23,8 +23,8 @@ def main(input_tsv, output_file):
     new_data_frame = pd.DataFrame()
 
     # insert geneids and goterms into new data frame
-    new_data_frame.insert(0, "gene_id", df[0])
-    new_data_frame.insert(1, "go_terms", df[13])
+    new_data_frame.insert(0, "gene_id", df[0]) # inserts into first index
+    new_data_frame.insert(1, "go_terms", df[13]) # inserts into second index
     
     # writes to new csv file
     new_data_frame.to_csv(output_file, sep="\t", index=False)

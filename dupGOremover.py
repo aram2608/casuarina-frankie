@@ -3,15 +3,35 @@ import pandas as pd
 
 def main(input_txt, output_txt,):
 
+    """
+    This is a function to keep unique goterms from an input TSV file. The script assumes
+    there are no headers and that index [0] are the gene_ids and index[1] are the goterms.
+
+    The purpose of this script is to remove redundancy in goterms for downstream GO
+    enrichment analysis from custom GO annotations. 
+
+    Ideally, the goterms were annotated using InterProScan where redundanct is introduced
+    from the multiple search tools use such as Panther, Pfam, InterPro, etc..
+
+    Example Usage:
+    python3 dupGOremover.py input_tsv output_tsv
+    """
+
     # import file with go terms as a data frame
-    df = pd.read_csv(input_txt, sep="\t", index_col=False)
+    df = pd.read_csv(input_txt, sep="\t", header=None, index_col=False)
     
     # creates new empty data frame
     new_frame = pd.DataFrame()
 
-    # creates an empty list to store go terms
+    # adds columns to a new working data frame
+    new_frame.insert(1, 'goterms', df[1])
 
-    for item in df
+    # a nested function to keep only unique values from each row
+    def keep_unique():
+        return list(set(row))
+    
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Removes duplicate GO terms for each gene ID.")
