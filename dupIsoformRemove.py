@@ -5,24 +5,17 @@ def remove_duplicate_fasta(input_txt, output_txt, geneID):
     
     """
     Removes isoform duplicates based on gene IDs from a tab-delimited file.
-    You can provide the gene column as a name or index (0-based).
+    You can provide the gene column as an index (0-based).
 
     Example:
-    python3 script.py input.tsv output.tsv --ID 0
-    python3 script.py input.tsv output.tsv --ID gene_name
+    python3 dupIsoformRemove.py input.tsv output.tsv --ID 0
     """
 
+    # Read in initial dataframe and use input --ID as the column index
     df = pd.read_csv(input_txt, sep='\t')
     original_count = len(df)
-
-    # Determine if geneID is a digit (index) or column name
-    try:
-        geneID_index = int(geneID)
-        gene_col = df.columns[geneID_index]
-    except ValueError:
-        raise ValueError(f"Column '{gene_col}' not found. Available columns: {list(df.columns)}")
-    except IndexError:
-        raise IndexError(f"Column index {geneID_index} is out of bounds. File has {len(df.columns)} columns.")
+    geneID_index = int(geneID)
+    gene_col = df.columns[geneID_index]
 
     # Create base ID by removing isoform suffix
     df['base_id'] = df[gene_col].apply(lambda x: x.rsplit('.', 1)[0])
@@ -31,7 +24,7 @@ def remove_duplicate_fasta(input_txt, output_txt, geneID):
     df_unique = df.drop_duplicates(subset='base_id', keep='first')
 
     # Replace the original ID column with the base_id
-    df_unique[gene_col] = df_unique['base_id']
+    df_unique.loc[:, gene_col] = df_unique['base_id']
     df_unique = df_unique.drop(columns=['base_id'])
 
     new_count = len(df_unique)

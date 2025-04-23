@@ -19,19 +19,22 @@ def main(input_txt, output_txt,):
 
     # import file with go terms as a data frame
     df = pd.read_csv(input_txt, sep="\t", header=None, index_col=False)
-    
-    # creates new empty data frame
-    new_frame = pd.DataFrame()
+    df.columns = ['gene_ids', 'go_terms']
 
-    # adds columns to a new working data frame
-    new_frame.insert(1, 'goterms', df[1])
+    # creates an empty dictionary to store our gene_ids and goterms
+    gene_GO = {}
 
-    # a nested function to keep only unique values from each row
-    def keep_unique():
-        return list(set(row))
-    
+    # iterates over each row and stores as a key if a gene_id and value if a GO:list
+    for id, row in df.iterrows(): # iterates over rows
+        gene = row['gene_ids']
+        terms = row['go_terms'].split(',')
+        unique_gos = sorted(set(terms)) # removes duplicates
+        gene_GO[gene] = unique_gos
 
-
+    # write output file
+    with open(output_txt, "w") as out:
+        for gene, terms in gene_GO.items():
+            out.write(f"{gene}\t{','.join(terms)}\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Removes duplicate GO terms for each gene ID.")
