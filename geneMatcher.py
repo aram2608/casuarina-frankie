@@ -25,7 +25,10 @@ def main(blast_file, gene_file, blast_index, gene_index, output_file):
     col2 = df2.columns[gene_column_2]
 
     # finds overlapping data between both dataframe in the specified indexes
-    overlap_data = pd.merge(df[[col1]], df2[[col2]], left_on=col1, right_on=col2).drop_duplicates()
+    overlap_data = pd.merge(df, df2[[col2]], left_on=col1, right_on=col2)
+
+    # drop dupes
+    overlap_data = overlap_data.drop_duplicates()
 
     # write to new text file
     overlap_data.to_csv(output_file, sep="\t", index=False)
