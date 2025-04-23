@@ -1,7 +1,7 @@
 import pandas as pd
 import argparse
 
-def main(input_file, input_file2, index_1, index_2, output_txt):
+def main(blast_file, gene_file, blast_index, gene_index, output_file):
     """
     A script for finding matching genes between a blast output and differentially
     expressed genes from and RNA-seq study. 
@@ -17,24 +17,26 @@ def main(input_file, input_file2, index_1, index_2, output_txt):
     """
 
     # read in files for matching
-    df = pd.read_csv(input_file, sep="\t", header=None, index_col=False)
-    df2 = pd.read_csv(input_file2, sep="\t", header=None, index_col=False)
-    gene_column_1 = int(index_1)
-    gene_column_2 = int(index_2)
+    df = pd.read_csv(blast_file, sep="\t", header=None, index_col=False)
+    df2 = pd.read_csv(gene_file, sep="\t", header=None, index_col=False)
+    gene_column_1 = int(blast_index) # sets gene_column for blast file with
+    gene_column_2 = int(gene_index) # sets gene_column for gene file
+    col1 = df.columns[gene_column_1]
+    col2 = df2.columns[gene_column_2]
 
     # finds overlapping data between both dataframe in the specified indexes
-    overlap_data = pd.merge(df[[gene_column_1]], df2[[gene_column_2]]).drop_duplicates()
+    overlap_data = pd.merge(df[[col1]], df2[[col2]], left_on=col1, right_on=col2).drop_duplicates()
 
     # write to new text file
-    overlap_data.to_csv(output_txt, sep="\t", index=False)
+    overlap_data.to_csv(output_file, sep="\t", index=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Adds blast terms to a file with diff expressed genes.")
-    parser.add_argument("input_txt", help="Input file with blast terms")
-    parser.add_argument("input_txt2", help="Input file with diff expressed genes")
-    parser.add_argument("output_txt", help="Output file with blast terms matched to diff expressed genes")
-    parser.add_argument("--ID1", dest="index_1", required=True, help="Index containing gene IDs")
-    parser.add_argument("--ID2", dest="index_2", required=True, help="Index containing gene IDs")
+    parser.add_argument("blast_file", help="Input file with blast terms")
+    parser.add_argument("gene_file", help="Input file with diff expressed genes")
+    parser.add_argument("output_file", help="Output file with blast terms matched to diff expressed genes")
+    parser.add_argument("--ID1", dest="blast_index", required=True, help="Index containing gene IDs")
+    parser.add_argument("--ID2", dest="gene_index", required=True, help="Index containing gene IDs")
     args = parser.parse_args()
 
-    main(args.input_txt,args.input_txt2 ,args.output_txt)
+    main(args.blast_file, args.gene_file, args.blast_index, args.gene_index, args.output_file)
