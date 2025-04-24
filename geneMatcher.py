@@ -17,21 +17,19 @@ def main(blast_file, gene_file, blast_index, gene_index, output_file):
     """
 
     # read in files for matching
-    df = pd.read_csv(blast_file, sep="\t", header=None, index_col=False)
-    df2 = pd.read_csv(gene_file, sep="\t", header=None, index_col=False)
-    gene_column_1 = int(blast_index) # sets gene_column for blast file with
-    gene_column_2 = int(gene_index) # sets gene_column for gene file
-    col1 = df.columns[gene_column_1]
-    col2 = df2.columns[gene_column_2]
+    blast_df = pd.read_csv(blast_file, sep="\t", header=None, index_col=False)
+    gene_df = pd.read_csv(gene_file, sep="\t", header=None, index_col=False)
+    gene_column = int(gene_index)
+    blast_column = int(blast_index)
 
-    # finds overlapping data between both dataframe in the specified indexes
-    overlap_data = pd.merge(df, df2[[col2]], left_on=col1, right_on=col2)
+    # extract and cleanup upregulated genes
+    upregulated_genes = set(gene_df[gene_column].astype(str).str.strip())
 
-    # drop dupes
-    overlap_data = overlap_data.drop_duplicates()
+    # find matching genes and save to new frame
+    matched = blast_df[blast_df[blast_column].astype(str).str.strip().isin(upregulated_genes)]
 
     # write to new text file
-    overlap_data.to_csv(output_file, sep="\t", index=False)
+    matched.to_csv(output_file, sep="\t", index=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Adds blast terms to a file with diff expressed genes.")

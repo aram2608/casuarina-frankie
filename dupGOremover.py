@@ -24,7 +24,7 @@ def main(input_txt, output_txt,):
     # creates an empty dictionary to store our gene_ids and goterms
     gene_GO = {}
 
-    # iterates over each row and stores as a key if a gene_id and value if a GO:list
+    # iterates over each row and stores as a key if a gene_id and value if a GO: term list
     for id, row in df.iterrows(): # iterates over rows
         gene = row['gene_ids']
         terms = row['go_terms'].split(',')

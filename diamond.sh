@@ -20,7 +20,7 @@ $diamond_path/./diamond blastp \
     -q "$input_seq" \
     --evalue 1e-5 \
     --max-target-seqs 1 \
-    --outfmt 6 qseqid sseqid pident pident length mismatch gapopen evalue bitscore stitle \
+    --outfmt 6 qseqid sseqid pident length mismatch gapopen evalue bitscore stitle \
     -p 15 >> "$output_path"/diamond_output.txt
 
 # downloading the tool
