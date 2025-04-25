@@ -17,7 +17,7 @@ def main(blast_file, gene_file, blast_index, gene_index, output_file):
     """
 
     # read in files for matching
-    blast_df = pd.read_csv(blast_file, sep="\t", header=None, index_col=False)
+    blast_df = pd.read_csv(blast_file, sep="\t", header=None, index_col=False, low_memory=False)
     gene_df = pd.read_csv(gene_file, sep="\t", header=None, index_col=False)
     gene_column = int(gene_index)
     blast_column = int(blast_index)
