@@ -28,6 +28,7 @@ echo "Finished calculating counts"
 # exon counts only coding sequences
 # -s tells you strandness of rna, 2 is reverse
 # -a is for annotation files, GTF
+# -g is extremely important, it collapses isoforms to prevent watering down of analysis
 # -o is for output
 # -T is for adding threads
 # the input bam file is postional

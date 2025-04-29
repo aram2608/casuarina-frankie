@@ -32,3 +32,4 @@ done
 date #print end time of script
 
 #added --rf flag for reverse strandness of my reads
+# run stringtie --merge afterwards to merge all transcript assemblies
