@@ -22,7 +22,8 @@ emapper.py -i $protein_seqs \
     --data_dir . \
     --tax_scope 33090 \
     --target_orthologs all \
-    --evalue 1e-3
+    --evalue 1e-3 \
+    --override
 
 echo "Finished annotating $protein_seqs"
 date # script end time
@@ -39,3 +40,4 @@ date # script end time
 # --evalue setting a cutoff as well to get only relevant matches
 
 # yup gotta apply taxa scope, pretty sure my plant is not sniffing things or developing cancer
+# 33090 is for viridaeplanta so all green plants
