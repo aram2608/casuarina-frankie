@@ -9,9 +9,6 @@
 #whatever directory you ran the command in will be the input for the adapter
 #directory
 
-source /home/ja1473/anaconda3/etc/profile.d/conda.sh
-conda activate genomics
-
 date #prints start time of script
 input_directory=$1 #provide input directory
 output_directory=$2 #provide output directory
@@ -39,7 +36,7 @@ for fastq_file in $input_directory/*;do #loop through files of input directory
             LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
             
         #an error handling step in case a file is not processed for some reason
-        if  [ $? -ne 0 ]; then
+        if  [ $? -ne 0 ]; then # $? is a special variable that stores the status of the previous command, -ne 0 means a non zero error was thrown
             echo "Error Trimming $fastq_file"
         fi
     fi

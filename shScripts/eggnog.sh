@@ -19,12 +19,15 @@ fi
 emapper.py -i $protein_seqs \
     -o $annotations \
     --cpu 10 \
-    --data_dir .
+    --data_dir . \
+    --tax_scope 33090 \
+    --target_orthologs all \
+    --evalue 1e-3
 
 echo "Finished annotating $protein_seqs"
 date # script end time
 
-# -i is the deafult input flag, takes proteins
+# -i is the default input flag, takes proteins
 # -o is the output flag
 # --itype if using another type of input specifiy
 # -m using mmseq search, needs prior setup before use
@@ -32,3 +35,7 @@ date # script end time
 # --data_dir sets the path to the eggnog database
 # --list_taxa can be used to see which taxa are in the databse
 # --tax_scope sets a boundary for which taxa annotations can come from
+# --target_orthologs all, adding this too, should increase our hits hopefully
+# --evalue setting a cutoff as well to get only relevant matches
+
+# yup gotta apply taxa scope, pretty sure my plant is not sniffing things or developing cancer
