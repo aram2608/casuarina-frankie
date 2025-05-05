@@ -84,3 +84,25 @@ The resulting counts matrix from `featurecounts` could now finally be used for d
 
 # Citations
 
+Babraham Bioinformatics—FastQC A Quality Control tool for High Throughput Sequence Data. (n.d.). Retrieved April 29, 2025, from https://www.bioinformatics.babraham.ac.uk/projects/fastqc/![image](https://github.com/user-attachments/assets/a60dcdd6-8aa1-47b6-a9bb-d747c4ac289e)
+
+Bolger, A. M., Lohse, M., & Usadel, B. (2014). Trimmomatic: A flexible trimmer for Illumina sequence data. Bioinformatics, 30(15), 2114–2120. https://doi.org/10.1093/bioinformatics/btu170![image](https://github.com/user-attachments/assets/3dcd67c7-34d2-477c-aa96-fcbda255f386)
+
+Lomsadze, A., Burns, P. D., & Borodovsky, M. (2014). Integration of mapped RNA-Seq reads into automatic training of eukaryotic gene finding algorithm. Nucleic Acids Research, 42(15), e119. https://doi.org/10.1093/nar/gku557![image](https://github.com/user-attachments/assets/c9bb9fb9-e058-40be-b845-469fbe77f907)
+
+Manni, M., Berkeley, M. R., Seppey, M., & Zdobnov, E. M. (2021). BUSCO: Assessing Genomic Data Quality and Beyond. Current Protocols, 1(12), e323. https://doi.org/10.1002/cpz1.323![image](https://github.com/user-attachments/assets/89f50514-c7ca-4b33-9b47-8bd1ad6b6858)
+
+Stanke, M., Keller, O., Gunduz, I., Hayes, A., Waack, S., & Morgenstern, B. (2006). AUGUSTUS: Ab initio prediction of alternative transcripts. Nucleic Acids Research, 34(suppl_2), W435–W439. https://doi.org/10.1093/nar/gkl200![image](https://github.com/user-attachments/assets/716f586a-c690-44cc-a43a-e14e10e79623)
+
+Brůna, T., Hoff, K. J., Lomsadze, A., Stanke, M., & Borodovsky, M. (2021). BRAKER2: Automatic eukaryotic genome annotation with GeneMark-EP+ and AUGUSTUS supported by a protein database. NAR Genomics and Bioinformatics, 3(1), lqaa108. https://doi.org/10.1093/nargab/lqaa108![image](https://github.com/user-attachments/assets/3eb14171-b157-418a-b47b-de8ded5eafec)
+
+Kim, D., Paggi, J. M., Park, C., Bennett, C., & Salzberg, S. L. (2019). Graph-based genome alignment and genotyping with HISAT2 and HISAT-genotype. Nature Biotechnology, 37(8), 907–915. https://doi.org/10.1038/s41587-019-0201-4![image](https://github.com/user-attachments/assets/dee08bff-ff52-4584-9bf2-14616c9cce5f)
+
+Liao, Y., Smyth, G. K., & Shi, W. (2014). featureCounts: An efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics, 30(7), 923–930. https://doi.org/10.1093/bioinformatics/btt656![image](https://github.com/user-attachments/assets/ddbefb4d-7fde-4f69-97cc-30bd5fff0979)
+
+Anders, S., & Huber, W. (2010). Differential expression analysis for sequence count data. Genome Biology, 11(10), R106. https://doi.org/10.1186/gb-2010-11-10-r106![image](https://github.com/user-attachments/assets/a7b78df3-31a3-4bac-95e6-0770fd3fe20a)
+
+Li, H., Handsaker, B., Wysoker, A., Fennell, T., Ruan, J., Homer, N., Marth, G., Abecasis, G., Durbin, R., & 1000 Genome Project Data Processing Subgroup. (2009). The Sequence Alignment/Map format and SAMtools. Bioinformatics, 25(16), 2078–2079. https://doi.org/10.1093/bioinformatics/btp352![image](https://github.com/user-attachments/assets/afb012ee-368c-49fc-bfe3-f228ae5bb714)
+
+Pertea, G., & Pertea, M. (2020). GFF Utilities: GffRead and GffCompare. F1000Research, 9, ISCB Comm J-304. https://doi.org/10.12688/f1000research.23297.2![Uploading image.png…]()
+
