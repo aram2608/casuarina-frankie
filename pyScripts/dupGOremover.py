@@ -10,7 +10,7 @@ def main(input_txt, output_txt,):
     The purpose of this script is to remove redundancy in goterms for downstream GO
     enrichment analysis from custom GO annotations. 
 
-    Ideally, the goterms were annotated using InterProScan where redundanct is introduced
+    Ideally, the goterms were annotated using InterProScan where redundance is introduced
     from the multiple search tools use such as Panther, Pfam, InterPro, etc..
 
     Example Usage:
@@ -43,4 +43,4 @@ if __name__ == "__main__":
     #parser.add_argument("--ID", dest="geneID", required=True, help="Column name or index containing gene IDs (e.g., 'query_name' or 0)")
     args = parser.parse_args()
 
-    main(args.input_txt, args.output_txt)#, args.geneID)
+    main(args.input_txt, args.output_txt)
