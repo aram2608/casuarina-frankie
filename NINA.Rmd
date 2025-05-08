@@ -27,7 +27,10 @@ if (!requireNamespace("DESeq2", quietly = TRUE))
   BiocManager::install("DESeq2")
 if (!requireNamespace("topGO", quietly = TRUE))
   BiocManager::install("topGO")
-
+if (!requireNamespace("clusterProfiler", quietly = TRUE))
+  BiocManager::install("clusterProfiler")
+if (!requireNamespace("KEGGREST", quietly = TRUE))
+  BiocManager::install("KEGGREST")
 # install CRAN packages
 if (!requireNamespace("ggVennDiagram", quietly = TRUE))
   install.packages("ggVennDiagram")
@@ -37,6 +40,14 @@ if (!requireNamespace("dplyr", quietly = TRUE))
   install.packages("dplyr")
 if (!requireNamespace("pheatmap", quietly = TRUE))
   install.packages("pheatmap")
+if (!requireNamespace("tidyr", quietly = TRUE))
+  install.packages("tidyr")
+if (!requireNamespace("enrichplot", quietly = TRUE))
+  install.packages("enrichplot")
+if (!requireNamespace("ggrepel", quietly = TRUE))
+  install.packages("ggrepel")
+if (requireNamespace("progress", quietly = ))
+  install.packages("progress")
 ```
 
 # Loading Libraries
@@ -51,6 +62,13 @@ library("ggVennDiagram")
 library("dplyr")
 library("pheatmap")
 library("topGO")
+library("clusterProfiler")
+library("tidyr")
+library("enrichplot")
+library("topGO")
+library("ggrepel")
+library("KEGGREST")
+library("progress")
 ```
 
 # Data Import
@@ -171,7 +189,6 @@ pca <- ggplot(pca_data, aes(PC1, PC2, color = Treatment)) +
   coord_fixed() +
   scale_color_brewer(palette = "Set1") +
   theme_minimal(base_size = 14) +
-  theme(panel.background = element_rect(fill = "white")) +
   theme(
     legend.position = "right",
     legend.title = element_text(face = "bold"),
@@ -218,9 +235,8 @@ all_venn <- ggVennDiagram(all_degs, label_alpha = 0, edge_size = 0.5,
                           label_size = 5,
                           category.names = c("Cells vs. Control 24H",
                                              "Cells vs. Control 48H",
-                                             "NINA vs. Control 24H",
-                                             "NINA vs. Control 48H")) +
-  theme(panel.background = element_rect(fill = "white")) +
+                                             "Supernatant vs. Control 24H",
+                                             "Supernatant vs. Control 48H")) +
   scale_fill_distiller(palette = "Spectral") +
   labs(title = "All Differentially Expressed Genes") +
   theme(text = element_text(size = 10),
@@ -283,6 +299,59 @@ resN24_df$gene_id <- rownames(resN24_df)
 resN48_df$gene_id <- rownames(resN48_df)
 ```
 
+# Adding DIAMOND hit descriptions to label genes
+
+A nice trouble shooting snippet setdiff(resC24_df$gene_id, diamond_hits$qseqid)
+Prints out any non-matching IDs. For some reason none of mine matched at first, which was caused by a white space issue.
+
+```{r}
+# reading in our annotation file
+diamond_hits <- read.delim("filtered.tsv", sep = "\t", header = TRUE)
+
+# trimming white space off the columns
+diamond_hits$qseqid <- trimws(diamond_hits$qseqid)
+diamond_hits$sseqid <- trimws(diamond_hits$sseqid)
+diamond_hits$stitle <- trimws(diamond_hits$stitle)
+
+# function to add annotations to results dataframe
+add_diamond_annotations <- function(res_df, diamond_df) {
+  merge(res_df, diamond_df[, c("qseqid", "sseqid", "stitle")],
+        by.x = "gene_id", by.y = "qseqid", all.x = TRUE) # uses a left join (all.x)
+}
+
+# running our function for each data frame
+DIAMOND_resC24_df <- add_diamond_annotations(resC24_df, diamond_hits)
+DIAMOND_resC48_df <- add_diamond_annotations(resC48_df, diamond_hits)
+DIAMOND_resN24_df <- add_diamond_annotations(resN24_df, diamond_hits)
+DIAMOND_resN48_df <- add_diamond_annotations(resN48_df, diamond_hits)
+
+# adding a new column with only upregulated genes for labeling
+add_delabel_top50 <- function(df) {
+  
+  # selects our significant genes using both values
+  sig_genes <- df %>%
+    filter(abs(log2FoldChange) > 1.5, pvalue < 0.05)
+  
+  # selects the top 25 by p-value
+  top50 <- sig_genes %>%
+    arrange(pvalue) %>%
+    slice_head(n = 10)
+  
+  # add delabel column, label only top 50 genes
+  df$delabel <- ifelse(df$sseqid %in% top50$sseqid, df$sseqid, NA)
+  
+  return(df)
+}
+
+# Apply to your dataframes
+DIAMOND_resC24_df <- add_delabel_top50(DIAMOND_resC24_df)
+DIAMOND_resC48_df <- add_delabel_top50(DIAMOND_resC48_df)
+DIAMOND_resN24_df <- add_delabel_top50(DIAMOND_resN24_df)
+DIAMOND_resN48_df <- add_delabel_top50(DIAMOND_resN48_df)
+
+```
+
+
 # Volcano Plots
 
 These are classic for DEG analysis, Kaleb said to make one too so here goes nothing. I followed a tutorial from biostatsquid and the plots are made with ggplot2 and dply for data wrangling. Very useful tutorial btw, I learned that ggplot2 adds elements as you place them in the script. Like the layers of an onion.
@@ -291,38 +360,50 @@ Also, if you do ggplot2(foo) it works differently than ggplot2(data = foo).
 
 ```{r}
 # creates a basic volcano plot as a starting point
-volc_cells_24 <- ggplot(data = resC24_df, 
-                        aes(x = log2FoldChange, y = -log10(padj), col = diffexpress)) +
+volc_cells_24 <- ggplot(data = DIAMOND_resC24_df, 
+                        aes(x = log2FoldChange, 
+                            y = -log10(padj), 
+                            col = diffexpress)) +
   geom_vline(xintercept = c(-1.5, 1.5), col = "gray", linetype = "dashed") +
   geom_hline(yintercept = -log10(0.05), col = "gray", linetype = "dashed") +
   geom_point(size = 2) +
   scale_color_manual(values = c("blue","grey","red"),
                      labels = c("Downregulated", "Not significant", "Upregulated")) +
   coord_cartesian(ylim = c(0, 40), xlim = c(-10, 10)) +
-  labs(color = "Legend", x = expression("log"[2]*"FC"), y = expression("-log"[10]*"Adjusted p-value")) +
+  labs(color = "Legend", 
+       x = expression("log"[2]*"FC"), 
+       y = expression("-log"[10]*"Adjusted p-value")) +
   ggtitle("Cells vs. Control 24H")
 
 volc_cells_48 <- ggplot(data = resC48_df, 
-                        aes(x = log2FoldChange, y = -log10(padj), col = diffexpress)) +
+                        aes(x = log2FoldChange, 
+                            y = -log10(padj), 
+                            col = diffexpress)) +
   geom_vline(xintercept = c(-1.5, 1.5), col = "gray", linetype = "dashed") +
   geom_hline(yintercept = -log10(0.05), col = "gray", linetype = "dashed") +
   geom_point(size = 2) +
   scale_color_manual(values = c("blue","grey","red"),
                      labels = c("Downregulated", "Not significant", "Upregulated")) +
   coord_cartesian(ylim = c(0, 40), xlim = c(-10, 10)) +
-  labs(color = "Legend", x = expression("log"[2]*"FC"), y = expression("-log"[10]*"Adjusted p-value")) +
+  labs(color = "Legend", 
+       x = expression("log"[2]*"FC"), 
+       y = expression("-log"[10]*"Adjusted p-value")) +
   ggtitle("Cells vs. Control 48H")
 
 volc_NINA_24 <- ggplot(data = resN24_df, 
-                       aes(x = log2FoldChange, y = -log10(padj), col = diffexpress)) +
+                       aes(x = log2FoldChange, 
+                           y = -log10(padj), 
+                           col = diffexpress)) +
   geom_vline(xintercept = c(-1.5, 1.5), col = "gray", linetype = "dashed") +
   geom_hline(yintercept = -log10(0.05), col = "gray", linetype = "dashed") +
   geom_point(size = 2) +
   scale_color_manual(values = c("blue","grey","red"),
                      labels = c("Downregulated", "Not significant", "Upregulated")) +
   coord_cartesian(ylim = c(0, 40), xlim = c(-10, 10)) +
-  labs(color = "Legend", x = expression("log"[2]*"FC"), y = expression("-log"[10]*"Adjusted p-value")) +
-  ggtitle("NINA vs. Control 24H")
+  labs(color = "Legend", 
+       x = expression("log"[2]*"FC"), 
+       y = expression("-log"[10]*"Adjusted p-value")) +
+  ggtitle("Supernatant vs. Control 24H")
 
 volc_NINA_48 <- ggplot(data = resN48_df, 
                        aes(x = log2FoldChange, y = -log10(padj), col = diffexpress)) +
@@ -332,8 +413,10 @@ volc_NINA_48 <- ggplot(data = resN48_df,
   scale_color_manual(values = c("blue","grey","red"),
                      labels = c("Downregulated", "Not significant", "Upregulated")) +
   coord_cartesian(ylim = c(0, 40), xlim = c(-10, 10)) +
-  labs(color = "Legend", x = expression("log"[2]*"FC"), y = expression("-log"[10]*"Adjusted p-value")) +
-  ggtitle("NINA vs. Control 48H")
+  labs(color = "Legend", 
+       x = expression("log"[2]*"FC"), 
+       y = expression("-log"[10]*"Adjusted p-value")) +
+  ggtitle("Supernatant vs. Control 48H")
 
 # save plots
 ggsave("DEG_results/volc_cells_24.png",
@@ -352,38 +435,313 @@ volc_NINA_24
 volc_NINA_48
 ```
 
-# GO Analysis-Prep
+# Pathway Enrichment Analysis using clusterprofiler
 
-The next bits of code are my attempts at GO analysis. GO terms were found using InterProScan command line tool. The first code chunk is prepping data and creating gene universe.
+Going to be using ClusterProfiler and a tutorial/blog post I found. God bless the bioinformatics community. tidyr used for file cleanup. 
 
+We need to extract genes that have KEGG annotations to make the gene lists and gene universe/background. Otherwise it will water down our analysis which I think happened with the GO term enrichment.
+
+So originally, i just used the raw koterm_example from the $KEGG_Pathway eggnog-annotation, i think it would be better to make my own kegg pathway mappings given the $KO_terms instead, itll give me more control and help catch any pathways that might be missing.
 
 ```{r}
-# Import and clean go terms from InterProscan output
-raw_goterms <- read.csv("cleaned_gos.tsv", sep = "\t", header = TRUE)
+# Load in our data
+annotation_data <- read.delim("dups_removed_viridae.tsv", sep = "\t", header = TRUE, check.names = FALSE)
 
-raw_goterms$go_terms <- gsub("InterPro", "", raw_goterms$go_terms)
-raw_goterms$go_terms <- gsub("PANTHER", "", raw_goterms$go_terms)
-raw_goterms$go_terms <- gsub("\\(\\)", "", raw_goterms$go_terms) # this is some weird regex shenanigans you have to deal with, the \ helps you escape from special characters. So you need one \ to escape from the next backslash, then the next \ helps you escape from the ( and the next two \\ do that same for ). It is really silly but its what chatgpt said to do so whatever
-raw_goterms$go_terms <- gsub("\\|", ",", raw_goterms$go_terms)
+# check.names = FALSE helps with R putting X in front of columns that start with a number
 
-raw_goterms <- raw_goterms[, c("gene_id", "go_terms")]
-write.table(raw_goterms, file = "formatted_gos.tsv", sep = "\t",
-            row.names = FALSE, col.names = FALSE, quote = FALSE)
+# colnames(annotation_data)[1] <- gsub("^X\\.", "", colnames(annotation_data)[1])
+# run this if the column names import all funny
 
-# Importing the table back in as a gene-2-go object
-gene2goMappings <- readMappings(file = "formatted_gos.tsv", sep = "\t", IDsep = ",")
+# selecting columns of interest
+kegg_data <- annotation_data[c(1,13)] # the KEGG_ko column is index 12
+kegg_data <- kegg_data[kegg_data$KEGG_Pathway != "-", ]
+kegg_data$KEGG_Pathway <- gsub("ko", "map", kegg_data$KEGG_Pathway) # changes ko terms to map terms
+final_kegg <- kegg_data
+write.csv(final_kegg, "needs_formatting_kegg.tsv", quote = TRUE, row.names = FALSE)
 ```
 
-# GO Analysis Prep 2
+# Reformatting
 
-Extracting gene IDs and p-values
+So the pathway enrichment has not been going too well, because KO terms map to a braod array of non relevant pathways, the custom annotations I am trying to make end up enriching for random pathways like cancer prevention, retinol metabolism, etc. Non plant stuff, so I am going to try something different.
+
+In the previous code chunk I reformatted that pathways column KEGG_Pathway so that all the terms start with map. koblank and mapblank are interchangeable when it comes to searching for pathways so either or couldve worked, all I need is consitency accross the terms. Now I am gonna use a python script to collapse duplicates for each column so I don't skew my enrichment and reload the data.
+
+The next part will be trial and error but I am going to gsub out all the non-relevant pathways that got annotated from eggnogg mapper, so human, mouse stuff. That is gonna take some trial and error so we will see how long this takes.
+
+Alright so this is not going to work at alll, I either need to find a better way to annotate KEGG terms or just ignore them for now.
 
 ```{r}
+# load reformaatted data
+final_kegg <- read.delim("formatted_dups_removed_keggs.tsv", sep = "\t", check.names = FALSE, header = TRUE)
+```
+
+
+# Making our custom KO pathway mappings
+
+I had my friend chat help with this, restuctured the old script to take our new aproach. A bunch of boiler plate I did not want to do by hand.
+
+```{r}
+# expand KEGG_Pathway field to long format
+gene2pathway <- final_kegg %>%
+  filter(!is.na(KEGG_Pathway) & KEGG_Pathway != "-") %>%
+  select(query, KEGG_Pathway) %>%
+  separate_rows(KEGG_Pathway, sep = ",") %>%
+  mutate(
+    KEGG_Pathway = trimws(KEGG_Pathway),
+    Pathway_ID = KEGG_Pathway
+  ) %>%
+  select(query, Pathway_ID)
+
+# map Pathway_ID → Description (with retries + progress)
+unique_maps <- unique(gene2pathway$Pathway_ID)
+
+pb <- progress_bar$new(
+  format = "[:bar] :current/:total :percent pathway: :message",
+  total = length(unique_maps), clear = FALSE, width = 60
+)
+
+failed_maps <- c()
+pathway_name_list <- list()
+
+for (map_id in unique_maps) {
+  pb$tick(tokens = list(message = map_id))
+  attempt <- 1
+  max_retries <- 3
+  res <- NULL
+
+  while (attempt <= max_retries) {
+    Sys.sleep(0.5)
+    res <- tryCatch({
+      keggFind("pathway", map_id)
+    }, error = function(e) NULL)
+
+    if (!is.null(res) && length(res) > 0) break
+    attempt <- attempt + 1
+  }
+
+  if (!is.null(res) && length(res) > 0) {
+    pathway_name_list[[map_id]] <- data.frame(
+      Pathway_ID = map_id,
+      Pathway_Desc = unname(res),
+      stringsAsFactors = FALSE
+    )
+  } else {
+    failed_maps <- c(failed_maps, map_id)
+  }
+}
+
+term2name <- bind_rows(pathway_name_list)
+
+# final formatting for clusterProfiler
+term2gene <- unique(gene2pathway)
+term2gene <- term2gene[c(2,1)]
+
+# baackground gene set for custom enrichment
+background_kegg <- split(term2gene$query, term2gene$Pathway_ID)
+
+# sanity checks
+head(term2gene)
+head(term2name)
+
+# alrighty figured it out
+# the order for term2gene needs to be Pathway_ID first then query
+# so run this after this code chunk
+# term2gene <- term2gene(c(2,1))
+
+# then run for a sanity check
+# head(term2gene)
+```
+
+
+# Extract genes of interest
+
+Here we need to extract the genes we are interested in, I am picking only the genes that are fold change 1.5 and p-val 0.05. Quite stringent. Dplyr for data wrangling again
+
+```{r, echo=FALSE,message=FALSE}
+# trim whitespace for matching
+final_kegg$query <- trimws(final_kegg$query)
+final_kegg$KEGG_Pathway <- trimws(final_kegg$KEGG_Pathway)
+# adding annotations for KEGG terms
+kegg_annotated_C24 <- merge(resC24_df, final_kegg[, c("query", "KEGG_Pathway")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+kegg_annotated_C48 <-merge(resC48_df, final_kegg[, c("query", "KEGG_Pathway")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+kegg_annotated_N24 <- merge(resN24_df, final_kegg[, c("query", "KEGG_Pathway")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+kegg_annotated_N48 <- merge(resN48_df, final_kegg[, c("query", "KEGG_Pathway")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+# filtering for genes that have KEGG terms and not "-" values
+kegg_annotated_C24 <- kegg_annotated_C24[!is.na(kegg_annotated_C24$KEGG_Pathway) 
+                               & kegg_annotated_C24$KEGG_Pathway != "-",]
+
+kegg_annotated_C48 <- kegg_annotated_C48[!is.na(kegg_annotated_C48$KEGG_Pathway) 
+                               & kegg_annotated_C48$KEGG_Pathway != "-",]
+
+kegg_annotated_N24 <- kegg_annotated_N24[!is.na(kegg_annotated_N24$KEGG_Pathway) 
+                               & kegg_annotated_N24$KEGG_Pathway != "-",]
+
+kegg_annotated_N48 <- kegg_annotated_N48[!is.na(kegg_annotated_N48$KEGG_Pathway) 
+                               & kegg_annotated_N48$KEGG_Pathway != "-",]
+
+# extract query ids
+extracted_C24 <- kegg_annotated_C24 %>%
+  filter(abs(log2FoldChange) > 1.5, padj < 0.05) %>%
+  pull(gene_id)
+
+extracted_C48 <- kegg_annotated_C48 %>%
+  filter(abs(log2FoldChange) > 1.5, padj < 0.05) %>%
+  pull(gene_id)
+
+extracted_N24 <- kegg_annotated_N24 %>%
+  filter(abs(log2FoldChange) > 1.5, padj < 0.05) %>%
+  pull(gene_id)
+
+extracted_N48 <- kegg_annotated_N48 %>%
+  filter(abs(log2FoldChange) > 1.5, padj < 0.05) %>%
+  pull(gene_id)
+```
+
+
+# We should be good to go
+
+All the mappings are prepped, the GOIs are extracted, it should be good to go for enrichment.
+
+```{r}
+# enrichment function
+# Enrichment function with TERM2GENE and TERM2NAME as arguments
+enrichment_function <- function(extracted_genes, term2gene, term2name) {
+  enrichment_table <- enricher(
+    gene = extracted_genes,
+    TERM2GENE = term2gene,
+    TERM2NAME = term2name,
+    pvalueCutoff = 0.05,
+    pAdjustMethod = "BH",
+    qvalueCutoff = 0.05,
+    minGSSize = 10
+  )
+  return(enrichment_table)
+}
+
+# running comparisons
+enriched_C24 <- enrichment_function(extracted_C24, term2gene, term2name)
+enriched_C24_df <- as.data.frame(enriched_C24)
+
+enriched_C48 <- enrichment_function(extracted_C48, term2gene, term2name)
+enriched_C48_df <- as.data.frame(enriched_C48)
+
+enriched_N24 <- enrichment_function(extracted_N24, term2gene, term2name)
+enriched_N24_df <- as.data.frame(enriched_N24)
+
+enriched_N48 <- enrichment_function(extracted_N48, term2gene, term2name)
+enriched_N48_df <- as.data.frame(enriched_N48)
+
+# enrichplot object for plotting
+enrich_obj <- function(results_df, gene_list, background_genes, gene_sets_list) {
+  enrichres <- new("enrichResult",
+                   result = results_df,
+                   pvalueCutoff = 0.05,
+                   pAdjustMethod = "BH",
+                   qvalueCutoff = 0.05,
+                   gene = gene_list,
+                   universe = background_genes,
+                   geneSets = gene_sets_list,
+                   keytype = "UNKNOWN",
+                   organism = "ko",
+                   ontology = "KEGG",
+                   readable = FALSE,
+                   gene2Symbol = setNames(gene_list, gene_list)) # fallback mapping
+  return(enrichres)
+}
+```
+
+# Creating enrichres objects for plotting using enrichplot
+
+```{r}
+# running our functions for each comparson
+enrichres_C24 <- enrich_obj(results_df = enriched_C24_df, 
+                            gene_list = extracted_C24, 
+                            background_genes = annotation_data$query, # all the genes in our RNA seq experiment
+                            gene_sets_list = background_kegg) # custom gene set we made earlier
+
+class(enrichres_C24)
+# c48
+enrichres_C48 <- enrich_obj(results_df = enriched_C48_df, 
+                            gene_list = extracted_C48, 
+                            background_genes = annotation_data$query, 
+                            gene_sets_list = background_kegg)
+
+class(enrichres_C48)
+# n24
+enrichres_N24 <- enrich_obj(results_df = enriched_N24_df, 
+                            gene_list = extracted_N24, 
+                            background_genes = annotation_data$query, 
+                            gene_sets_list = background_kegg)
+
+class(enrichres_N24)
+# n48
+enrichres_N48 <- enrich_obj(results_df = enriched_N48_df, 
+                            gene_list = extracted_N48, 
+                            background_genes = annotation_data$query, 
+                            gene_sets_list = background_kegg)
+
+class(enrichres_N48)
+
+# plot
+C24_dotplot <- dotplot(enrichres_C24) + ggtitle("Cell vs. Control 24H")
+C48_dotplot <- dotplot(enrichres_C48) + ggtitle("Cell vs. Control 48H")
+N24_dotplot <- dotplot(enrichres_N24) + ggtitle("Supernatant vs. Control 24H")
+N48_dotplot <- dotplot(enrichres_N48) + ggtitle("Supernatant vs. Control 48H")
+
+# saving plots
+ggsave("DEG_results/dotplot_kegg_C24.png",
+       plot = C24_dotplot, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/dotplot_kegg_C48.png",
+       plot = C48_dotplot, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/dotplot_kegg_N24.png",
+       plot = N24_dotplot, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/dotplot_kegg_N48.png",
+       plot = N48_dotplot, width = 8, height = 6, dpi = 300)
+
+# plot to markdown
+C24_dotplot
+C48_dotplot
+N24_dotplot
+N48_dotplot
+```
+
+# Gonna give GO analysis another GO badum tss, prep work part 1
+
+Making our gene universe. Gotta filter out any genes that do not have any go terms or it'll wash out our analysis.
+
+```{r}
+# Going to create our gene universe from the eggnog mapper output
+go_terms <- annotation_data[c(1,10)]
+go_terms <- go_terms[go_terms$GOs != "-",]
+
+write.table(go_terms, file = "go_terms.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
+
+gene2goMappings <- readMappings(file = "go_terms.tsv", sep = "\t", IDsep = ",")
+```
+
+# I think we ready
+
+I am merging the go term data frame with the results frame from the DESeq analysis. Then I am removing any genes that do not have a go term to not wash out the analysis.
+
+```{r}
+# making a frame with only the genes with GO terms
+go_C24 <- merge(resC24_df, go_terms[, c("query", "GOs")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+go_C48 <-merge(resC48_df, go_terms[, c("query", "GOs")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+go_N24 <- merge(resN24_df, go_terms[, c("query", "GOs")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+go_N48 <- merge(resN48_df, go_terms[, c("query", "GOs")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+# filter out any genes with no GO term
+go_C24 <- go_C24[!is.na(go_C24$GOs),]
+go_C48 <- go_C48[!is.na(go_C48$GOs),]
+go_N24 <- go_N24[!is.na(go_N24$GOs),]
+go_N48 <- go_N48[!is.na(go_N48$GOs),]
+
 # Extract gene IDs and p-values
-Cp24 <- dplyr::select(resC24_df, gene_id,padj)
-Cp48 <- dplyr::select(resC48_df, gene_id,padj)
-Np24 <- dplyr::select(resN24_df, gene_id,padj)
-Np48 <- dplyr::select(resN48_df, gene_id,padj)
+Cp24 <- dplyr::select(go_C24, gene_id,padj)
+Cp48 <- dplyr::select(go_C48, gene_id,padj)
+Np24 <- dplyr::select(go_N24, gene_id,padj)
+Np48 <- dplyr::select(go_N48, gene_id,padj)
 
 # sort by p-value
 sorted_Cp24 <- Cp24[order(Cp24$padj),]
@@ -397,40 +755,36 @@ topgo_Cp48 <- sorted_Cp48$padj
 topgo_Np24 <- sorted_Np24$padj
 topgo_Np48 <- sorted_Np48$padj
 
+# name the topgo vector
 names(topgo_Cp24) <- sorted_Cp24$gene_id
 names(topgo_Cp48) <- sorted_Cp48$gene_id
 names(topgo_Np24) <- sorted_Np24$gene_id
 names(topgo_Np48) <- sorted_Np48$gene_id
 
-# Fishers Test parameters
-top5C24 <- quantile(x=topgo_Cp24, probs=0.05)
-top5C48 <- quantile(x=topgo_Cp48, probs=0.5)
-top5N24 <- quantile(x=topgo_Np24, probs=0.05)
-top5N48 <- quantile(x=topgo_Np48, probs=0.05)
-```
+# filtering value
+padj_cut <- 0.05
 
-# GO analysis
-
-Building topGOdata object using MF ontology.
-
-```{r, echo=FALSE, message=FALSE}
-# Fishers test functions
+# functions for filtering significant genes
 top5C24_func <- function(x) {
-  return(x <= top5C24)
+  return(x <= padj_cut)
 }
 
 top5C48_func <- function(x) {
-  return(x <= top5C48)
+  return(x <= padj_cut)
 }
 
 top5N24_func <- function(x) {
-  return(x <= top5N24) 
+  return(x <= padj_cut)
 }
 
 top5N48_func <- function(x) {
-  return(x <= top5N48)
+  return(x <= padj_cut)
 }
+```
 
+# Creating GO data objects for enrichment tests
+
+```{r, echo=FALSE,message=FALSE}
 # creating GO data objects for molecular function
 Cp24_go_mf <- new("topGOdata", 
                ontology = "MF", 
@@ -521,91 +875,538 @@ Np48_go_cc <- new("topGOdata",
 
 # Running Fisher's Test for Enrichment and Plotting
 
+I need to read more into this, the vignette talks about the statistics a bit
+but it straight up went over my head. Essentially we are finding which gene functions
+are over represented given our gene universe. I also need to find a way to make a function for this, it is so annoying to copy and paste and change values all the time.
+
+Comment from biostars for Ks vs weighted fishers
+Fisher and ks are just two ways of answering the same question: are the most significant genes enriched for any particular GO term annotations?
+
+Fisher's exact test compares the expected number of significant genes at random to the observed number of significant genes to arrive at a probability.
+
+The KS test compares the distribution of gene p-values expected at random to the observed distribution of the gene p-values to arrive at a probability. KS is theoretically the better choice because it does not require an arbitrary p-value threshold.
+
+Based of of my most recent project, however, the fisher test with p<0.01 and weight01 algorithm seemed to identify the informative GO terms, whereas KS and weight01 tended to identify very basic GO terms like biological process, or cellular process. This could be particular to my dataset, so I would suggest trying both and seeing which gives you more informative GO terms.
+
 ```{r, echo=FALSE,message=FALSE}
-# Enrichment tests for Molecular Function
-enrich_Cp24_mf <- runTest(Cp24_go_mf, algorithm = "classic", statistic = "fisher")
-enrich_Cp48_mf <- runTest(Cp48_go_mf, algorithm = "classic", statistic = "fisher")
-enrich_Np24_mf <- runTest(Np24_go_mf, algorithm = "classic", statistic = "fisher")
-enrich_Np48_mf <- runTest(Np48_go_mf, algorithm = "classic", statistic = "fisher")
+# Enrichment tests for Molecular Function Fisher
+fisher_Cp24_mf <- runTest(Cp24_go_mf, algorithm = "weight01", statistic = "fisher")
+fisher_Cp48_mf <- runTest(Cp48_go_mf, algorithm = "weight01", statistic = "fisher")
+fisher_Np24_mf <- runTest(Np24_go_mf, algorithm = "weight01", statistic = "fisher")
+fisher_Np48_mf <- runTest(Np48_go_mf, algorithm = "weight01", statistic = "fisher")
 
-# Enrichment tests for Biological Process
-enrich_Cp24_bp <- runTest(Cp24_go_bp, algorithm = "classic", statistic = "fisher")
-enrich_Cp48_bp <- runTest(Cp48_go_bp, algorithm = "classic", statistic = "fisher")
-enrich_Np24_bp <- runTest(Np24_go_bp, algorithm = "classic", statistic = "fisher")
-enrich_Np48_bp <- runTest(Np48_go_bp, algorithm = "classic", statistic = "fisher")
+# Enrichment tests for Biological Process Fisher
+fisher_Cp24_bp <- runTest(Cp24_go_bp, algorithm = "weight01", statistic = "fisher")
+fisher_Cp48_bp <- runTest(Cp48_go_bp, algorithm = "weight01", statistic = "fisher")
+fisher_Np24_bp <- runTest(Np24_go_bp, algorithm = "weight01", statistic = "fisher")
+fisher_Np48_bp <- runTest(Np48_go_bp, algorithm = "weight01", statistic = "fisher")
 
-# Enrichment tests for Cellular Component
-enrich_Cp24_cc <- runTest(Cp24_go_cc, algorithm = "classic", statistic = "fisher")
-enrich_Cp48_cc <- runTest(Cp48_go_cc, algorithm = "classic", statistic = "fisher")
-enrich_Np24_cc <- runTest(Np24_go_cc, algorithm = "classic", statistic = "fisher")
-enrich_Np48_cc <- runTest(Np48_go_cc, algorithm = "classic", statistic = "fisher")
+# Enrichment tests for Cellular Component Fisher
+fisher_Cp24_cc <- runTest(Cp24_go_cc, algorithm = "weight01", statistic = "fisher")
+fisher_Cp48_cc <- runTest(Cp48_go_cc, algorithm = "weight01", statistic = "fisher")
+fisher_Np24_cc <- runTest(Np24_go_cc, algorithm = "weight01", statistic = "fisher")
+fisher_Np48_cc <- runTest(Np48_go_cc, algorithm = "weight01", statistic = "fisher")
+
+# Enrichment tests for Molecular Function Kolmogrov-Smirnov
+ks_Cp24_mf <- runTest(Cp24_go_mf, algorithm = "classic", statistic = "ks")
+ks_Cp48_mf <- runTest(Cp48_go_mf, algorithm = "classic", statistic = "ks")
+ks_Np24_mf <- runTest(Np24_go_mf, algorithm = "classic", statistic = "ks")
+ks_Np48_mf <- runTest(Np48_go_mf, algorithm = "classic", statistic = "ks")
+
+# Enrichment tests for Biological Process Kolmogrov-Smirnov
+ks_Cp24_bp <- runTest(Cp24_go_bp, algorithm = "classic", statistic = "ks")
+ks_Cp48_bp <- runTest(Cp48_go_bp, algorithm = "classic", statistic = "ks")
+ks_Np24_bp <- runTest(Np24_go_bp, algorithm = "classic", statistic = "ks")
+ks_Np48_bp <- runTest(Np48_go_bp, algorithm = "classic", statistic = "ks")
+
+# Enrichment tests for Cellular Component Kolmogrov-Smirnov
+ks_Cp24_cc <- runTest(Cp24_go_cc, algorithm = "classic", statistic = "ks")
+ks_Cp48_cc <- runTest(Cp48_go_cc, algorithm = "classic", statistic = "ks")
+ks_Np24_cc <- runTest(Np24_go_cc, algorithm = "classic", statistic = "ks")
+ks_Np48_cc <- runTest(Np48_go_cc, algorithm = "classic", statistic = "ks")
+
+# Enrichment tests for Molecular Function Kolmogrov-Smirnov-Elim
+ks_elim_Cp24_mf <- runTest(Cp24_go_mf, algorithm = "elim", statistic = "ks")
+ks_elim_Cp48_mf <- runTest(Cp48_go_mf, algorithm = "elim", statistic = "ks")
+ks_elim_Np24_mf <- runTest(Np24_go_mf, algorithm = "elim", statistic = "ks")
+ks_elim_Np48_mf <- runTest(Np48_go_mf, algorithm = "elim", statistic = "ks")
+
+# Enrichment tests for Biological Process Kolmogrov-Smirnov-Elim
+ks_elim_Cp24_bp <- runTest(Cp24_go_bp, algorithm = "elim", statistic = "ks")
+ks_elim_Cp48_bp <- runTest(Cp48_go_bp, algorithm = "elim", statistic = "ks")
+ks_elim_Np24_bp <- runTest(Np24_go_bp, algorithm = "elim", statistic = "ks")
+ks_elim_Np48_bp <- runTest(Np48_go_bp, algorithm = "elim", statistic = "ks")
+
+# Enrichment tests for Cellular Component Kolmogrov-Smirnov-Elim
+ks_elim_Cp24_cc <- runTest(Cp24_go_cc, algorithm = "elim", statistic = "ks")
+ks_elim_Cp48_cc <- runTest(Cp48_go_cc, algorithm = "elim", statistic = "ks")
+ks_elim_Np24_cc <- runTest(Np24_go_cc, algorithm = "elim", statistic = "ks")
+ks_elim_Np48_cc <- runTest(Np48_go_cc, algorithm = "elim", statistic = "ks")
 ```
 
 # Generating a Table for Plotting
 
+This function may be broken, need to test it a bit more. I might have to find a different way to do this since the plots look a bit strange.
+
 ```{r, echo=FALSE,message=FALSE}
 # Function to generate a nicely formatted enrichment table
-get_enrich_table <- function(go_obj, test_result, top_n = 10) {
+get_enrich_table <- function(go_obj, fisher_result, ks_result, ks_elim, top_n = 10, total_genes = NULL) {
   tab <- GenTable(go_obj,
-                  classicFisher = test_result,
+                  classicFisher = fisher_result,
+                  classicKS = ks_result,
+                  elimKS = ks_elim,
+                  orderBy = "classicFisher", # orders results by sig p-values
+                  ranksOf = "classicFisher",
                   topNodes = top_n) %>%
-    dplyr::mutate(pval = as.numeric(classicFisher),
-                  Term = factor(Term, levels = rev(Term)),
-                  Count = as.numeric(Significant))  # Important: convert 'Significant' to numeric
+    mutate(
+      pvalue = as.numeric(classicFisher),
+      elimKS = as.numeric(elimKS),
+      classicKS = as.numeric(classicKS),
+      Term = factor(Term, levels = rev(Term)),
+      Count = as.numeric(Significant),
+      GeneRatio = if (!is.null(total_genes)) Count / total_genes else NA_real_
+    ) %>%
+    select(Term, Count, GeneRatio, pvalue, everything()) %>%
+    arrange(pvalue)
+
   return(tab)
 }
 
 # Molecular Function (MF)
-tab_Cp24_mf <- get_enrich_table(Cp24_go_mf, enrich_Cp24_mf)
-tab_Cp48_mf <- get_enrich_table(Cp48_go_mf, enrich_Cp48_mf)
-tab_Np24_mf <- get_enrich_table(Np24_go_mf, enrich_Np24_mf)
-tab_Np48_mf <- get_enrich_table(Np48_go_mf, enrich_Np48_mf)
+tab_Cp24_mf <- get_enrich_table(Cp24_go_mf, 
+                                fisher_Cp24_mf, 
+                                ks_Cp24_mf, 
+                                ks_elim_Cp24_mf)
+
+tab_Cp48_mf <- get_enrich_table(Cp48_go_mf, 
+                                fisher_Cp48_mf, 
+                                ks_Cp48_mf, 
+                                ks_elim_Cp48_mf)
+
+tab_Np24_mf <- get_enrich_table(Np24_go_mf, 
+                                fisher_Np24_mf,
+                                ks_Np24_mf,
+                                ks_elim_Np24_mf)
+
+tab_Np48_mf <- get_enrich_table(Np48_go_mf, 
+                                fisher_Np48_mf,
+                                ks_Np48_mf,
+                                ks_elim_Np48_mf)
 
 # Biological Process (BP)
-tab_Cp24_bp <- get_enrich_table(Cp24_go_bp, enrich_Cp24_bp)
-tab_Cp48_bp <- get_enrich_table(Cp48_go_bp, enrich_Cp48_bp)
-tab_Np24_bp <- get_enrich_table(Np24_go_bp, enrich_Np24_bp)
-tab_Np48_bp <- get_enrich_table(Np48_go_bp, enrich_Np48_bp)
+tab_Cp24_bp <- get_enrich_table(Cp24_go_bp, 
+                                fisher_Cp24_bp,
+                                ks_Cp24_bp,
+                                ks_elim_Cp24_bp)
+
+tab_Cp48_bp <- get_enrich_table(Cp48_go_bp, 
+                                fisher_Cp48_bp,
+                                ks_Cp48_bp,
+                                ks_elim_Cp48_bp)
+
+tab_Np24_bp <- get_enrich_table(Np24_go_bp, 
+                                fisher_Np24_bp,
+                                ks_Np24_bp,
+                                ks_elim_Np24_bp)
+
+tab_Np48_bp <- get_enrich_table(Np48_go_bp, 
+                                fisher_Np48_bp,
+                                ks_Np48_bp,
+                                ks_elim_Np48_bp)
 
 # Cellular Component (CC)
-tab_Cp24_cc <- get_enrich_table(Cp24_go_cc, enrich_Cp24_cc)
-tab_Cp48_cc <- get_enrich_table(Cp48_go_cc, enrich_Cp48_cc)
-tab_Np24_cc <- get_enrich_table(Np24_go_cc, enrich_Np24_cc)
-tab_Np48_cc <- get_enrich_table(Np48_go_cc, enrich_Np48_cc)
-```
+tab_Cp24_cc <- get_enrich_table(Cp24_go_cc, 
+                                fisher_Cp24_cc,
+                                ks_Cp24_cc,
+                                ks_elim_Cp24_cc)
 
+tab_Cp48_cc <- get_enrich_table(Cp48_go_cc, 
+                                fisher_Cp48_cc,
+                                ks_Cp48_cc,
+                                ks_elim_Cp48_cc)
+
+tab_Np24_cc <- get_enrich_table(Np24_go_cc, 
+                                fisher_Np24_cc,
+                                ks_Np24_cc,
+                                ks_elim_Np24_cc)
+
+tab_Np48_cc <- get_enrich_table(Np48_go_cc, 
+                                fisher_Np48_cc,
+                                ks_Np48_cc,
+                                ks_elim_Np48_cc)
+```
 # Plotting Bar Plot
 
+Some standard ggplots for enriched GO functions. The p-values are different for each one 
+which is why I think something is not quite right in the process. I may need to play around
+with the Fisher's test, table, and plot functions to figure out what is going on.
+
 ```{r}
-# Plotting function
-plot_enrich_bar <- function(enrich_tab, title) {
-  ggplot(enrich_tab, aes(x = Term, y = Count, fill = pval)) +
+# plotting function
+plot_enrich_bar <- function(enrich_tab, title = "Enriched Terms") {
+  enrich_tab <- enrich_tab %>%
+    filter(pvalue < 0.05) %>% # filters out non-significant genes
+    arrange(pvalue) %>% # arranges bars by p-value
+    mutate(
+      Term = factor(Term, levels = rev(unique(Term))),  # keep in plotted order
+      Count = as.numeric(Count),
+      pvalue = as.numeric(pvalue)
+    )
+
+  ggplot(enrich_tab, aes(x = Count, y = Term, fill = pvalue)) +
     geom_bar(stat = "identity") +
-    coord_flip() +
-    scale_fill_gradient(low = "red", high = "blue", name = "p-value", trans = "reverse") +
-    labs(title = title,
-         x = "GO Term",
-         y = "Gene Count") +
-    theme_minimal()
+    scale_fill_gradient(low = "red", high = "blue", name = "p.adjust") +
+    labs(
+      title = title,
+      x = "Gene Count",
+      y = NULL
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold"),
+      axis.text.y = element_text(size = 10),
+      axis.title.x = element_text(size = 12),
+      legend.title = element_text(size = 10),
+      legend.text = element_text(size = 9)
+    )
 }
 
 # MF plots
-plot_enrich_bar(tab_Cp24_mf, "GO Enrichment: MF Cells vs. Control 24H")
-plot_enrich_bar(tab_Cp48_mf, "GO Enrichment: MF Cells vs. Control 48H")
-plot_enrich_bar(tab_Np24_mf, "GO Enrichment: MF Frankia vs. Control 24H")
-plot_enrich_bar(tab_Np48_mf, "GO Enrichment: MF Frankia vs. Control 48H")
+go_MF_graph_C24 <- plot_enrich_bar(tab_Cp24_mf, "MF Cells vs. Control 24H")
+go_MF_graph_C48 <- plot_enrich_bar(tab_Cp48_mf, "MF Cells vs. Control 48H")
+go_MF_graph_N24 <- plot_enrich_bar(tab_Np24_mf, "MF Supernatant vs. Control 24H")
+go_MF_graph_n48 <- plot_enrich_bar(tab_Np48_mf, "MF Supernatant vs. Control 48H")
 
 # BP plots
-plot_enrich_bar(tab_Cp24_bp, "GO Enrichment: BP Cells vs. Control 24H")
-plot_enrich_bar(tab_Cp48_bp, "GO Enrichment: BP Cells vs. Control 48H")
-plot_enrich_bar(tab_Np24_bp, "GO Enrichment: BP Frankia vs. Control 24H")
-plot_enrich_bar(tab_Np48_bp, "GO Enrichment: BP Frankia vs. Control 48H")
+go_bp_graph_C24 <- plot_enrich_bar(tab_Cp24_bp, "BP Cells vs. Control 24H")
+go_bp_graph_C48 <- plot_enrich_bar(tab_Cp48_bp, "BP Cells vs. Control 48H")
+go_bp_graph_N24 <- plot_enrich_bar(tab_Np24_bp, "BP Supernatant vs. Control 24H")
+go_bp_graph_N48 <- plot_enrich_bar(tab_Np48_bp, "BP Supernatant vs. Control 48H")
 
 # CC plots
-plot_enrich_bar(tab_Cp24_cc, "GO Enrichment: CC Cells vs. Control 24H")
-plot_enrich_bar(tab_Cp48_cc, "GO Enrichment: CC Cells vs. Control 48H")
-plot_enrich_bar(tab_Np24_cc, "GO Enrichment: CC Frankia vs. Control 24H")
-plot_enrich_bar(tab_Np48_cc, "GO Enrichment: CC Frankia vs. Control 48H")
+go_CC_graph_C24 <- plot_enrich_bar(tab_Cp24_cc, "CC Cells vs. Control 24H")
+go_CC_graph_C48 <- plot_enrich_bar(tab_Cp48_cc, "CC Cells vs. Control 48H")
+go_CC_graph_N24 <- plot_enrich_bar(tab_Np24_cc, "CC Supernatant vs. Control 24H")
+go_CC_graph_N48 <- plot_enrich_bar(tab_Np48_cc, "CC Supernatant vs. Control 48H")
+
+# saving graphs
+ggsave("DEG_results/go_MF_C24.png",
+       plot = go_MF_graph_C24, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/go_MF_C48.png",
+       plot = go_MF_graph_C48, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/go_MF_N24.png",
+       plot = go_MF_graph_N24, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/go_MF_N48.png",
+       plot = go_MF_graph_n48, width = 8, height = 6, dpi = 300)
+
+ggsave("DEG_results/go_bp_C24.png",
+       plot = go_bp_graph_C24, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/go_bp_C48.png",
+       plot = go_bp_graph_C48, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/go_bp_N24.png",
+       plot = go_bp_graph_N24, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/go_bp_N48.png",
+       plot = go_bp_graph_N48, width = 8, height = 6, dpi = 300)
+
+ggsave("DEG_results/go_CC_C24.png",
+       plot = go_CC_graph_C24, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/go_CC_C48.png",
+       plot = go_CC_graph_C48, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/go_CC_N24.png",
+       plot = go_CC_graph_N24, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/go_CC_N48.png",
+       plot = go_CC_graph_N48, width = 8, height = 6, dpi = 300)
+
+# plot to markdown
+go_MF_graph_C24
+go_MF_graph_C48
+go_MF_graph_N24
+go_MF_graph_n48
+
+go_bp_graph_C24
+go_bp_graph_C48
+go_bp_graph_N24
+go_bp_graph_N48
+
+go_CC_graph_C24
+go_CC_graph_C48
+go_CC_graph_N24
+go_CC_graph_N48
+```
+# Redo of analysis with different pairwise comparisons
+
+Alrighty so we got our data analysis down pretty pat. Now I want to compare the different time points to each other
+
+```{r}
+# extract the comparisons we need for the cells 24 and 48
+cells_time_frame <- counts[-c(1,2,3,7,8,9,13,14,15)] # there is probably a better way to do this honestly, im removing columns from the original counts dataframe to leave the ones I am interested in, I bet dplyr has a better way to do this tbh
+
+# extract column data of interest
+cells_column_data <- coldata[c(4,5,6,10,11,12),] # the comma denotes rows, without a comma it denotes the columns
 ```
 
+# DESeq Analysis Formula
+
+```{r}
+### DEG ANALYSIS ###
+
+# creates a DeseqDataSet or DDS
+cells_dds <- DESeqDataSetFromMatrix(countData = cells_time_frame,
+                              colData = cells_column_data,
+                              design = ~ Treatment)
+
+# sets the comparisons, in this case the coldata column name is Treatment,
+# the reference is named cells48, I am gonna try this and see how it goes
+cells_dds$Treatment <- relevel(cells_dds$Treatment, ref = "cells48")
+
+# no clue what this does, manual said to tho
+# prints the dataframe i suppose?
+cells_dds
+
+# performs DEG
+cells_dds <- DESeq(cells_dds)
+
+# creates a results dataframe
+cells_results <- results(cells_dds)
+```
+
+# Sanity Checks
+
+```{r}
+# prints results
+cells_results
+
+# prints summary of results
+summary(cells_results)
+
+# prints pairwise comparisons,useful double check
+resultsNames(cells_dds)
+```
+
+# Now lets do the same for the supernatant
+
+```{r}
+supernat_time_frame <- counts[-c(1:6,10:12)] # even now i made it more simple but theres gotta be a better way right?
+
+# extract column data of interest
+supernat_column_data <- coldata[c(7:9,13:15),] # the comma denotes rows, without a comma it denotes the columns
+```
+
+# DESeq Analysis
+
+```{r}
+### DEG ANALYSIS ###
+
+# creates a DeseqDataSet or DDS
+super_dds <- DESeqDataSetFromMatrix(countData = supernat_time_frame,
+                              colData = supernat_column_data,
+                              design = ~ Treatment)
+
+# sets the comparisons, in this case the coldata column name is Treatment,
+# the reference is named cells48, I am gonna try this and see how it goes
+super_dds$Treatment <- relevel(super_dds$Treatment, ref = "NINA48")
+
+# no clue what this does, manual said to tho
+# prints the dataframe i suppose?
+super_dds
+
+# performs DEG
+super_dds <- DESeq(super_dds)
+
+# creates a results dataframe
+super_results <- results(super_dds)
+```
+
+# Sanity Checks
+
+```{r}
+# prints results
+super_results
+
+# prints summary of results
+summary(super_results)
+
+# prints pairwise comparisons,useful double check
+resultsNames(super_dds)
+```
+
+# Time for plotting and analysis
+
+A lot of this is boilerplate unfortunately :(
+
+```{r}
+# store comparison names
+cells_names <- resultsNames(cells_dds)[-c(1)]
+super_names <- resultsNames(super_dds)[-c(1)]
+
+#saves results for each comparison
+cellsRes <- results(cells_dds, name = cells_names)
+superRes <- results(super_dds, name = super_names) 
+
+#filter the data for NA values
+cells_df <- as.data.frame(cellsRes) %>% # pipe operator, the same as | foo | in bash
+  filter(!is.na(log2FoldChange), !is.na(padj))
+super_df <- as.data.frame(superRes) %>%
+  filter(!is.na(log2FoldChange), !is.na(padj))
+
+# add columns for up, down, and no-sig
+cells_df$diffexpress <- "NO" # initializes column with no as default
+cells_df$diffexpress[cells_df$padj < 0.05 & cells_df$log2FoldChange > 1.5] <- "UP"
+cells_df$diffexpress[cells_df$padj < 0.05 & cells_df$log2FoldChange < -1.5] <- "DOWN"
+
+super_df$diffexpress <- "NO" # initializes column with no as default
+super_df$diffexpress[super_df$padj < 0.05 & super_df$log2FoldChange > 1.5] <- "UP"
+super_df$diffexpress[super_df$padj < 0.05 & super_df$log2FoldChange < -1.5] <- "DOWN"
+
+# convert row names to columns
+cells_df$gene_id <- rownames(cells_df)
+super_df$gene_id <- rownames(super_df)
+```
+
+# Volcanos
+
+```{r}
+# creates a basic volcano plot as a starting point
+cells_volc <- ggplot(data = cells_df, 
+                        aes(x = log2FoldChange, 
+                            y = -log10(padj), 
+                            col = diffexpress)) +
+  geom_vline(xintercept = c(-1.5, 1.5), col = "gray", linetype = "dashed") +
+  geom_hline(yintercept = -log10(0.05), col = "gray", linetype = "dashed") +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("blue","grey","red"),
+                     labels = c("Downregulated", "Not significant", "Upregulated")) +
+  coord_cartesian(ylim = c(0, 75), xlim = c(-10, 10)) +
+  labs(color = "Legend", 
+       x = expression("log"[2]*"FC"), 
+       y = expression("-log"[10]*"Adjusted p-value")) +
+  ggtitle("Cells 24 vs. Cells 48")
+
+super_volc <- ggplot(data = super_df, 
+                        aes(x = log2FoldChange, 
+                            y = -log10(padj), 
+                            col = diffexpress)) +
+  geom_vline(xintercept = c(-1.5, 1.5), col = "gray", linetype = "dashed") +
+  geom_hline(yintercept = -log10(0.05), col = "gray", linetype = "dashed") +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("blue","grey","red"),
+                     labels = c("Downregulated", "Not significant", "Upregulated")) +
+  coord_cartesian(ylim = c(0, 40), xlim = c(-10, 10)) +
+  labs(color = "Legend", 
+       x = expression("log"[2]*"FC"), 
+       y = expression("-log"[10]*"Adjusted p-value")) +
+  ggtitle("Supernatant 24 vs. Supernatant 48")
+
+# save plots
+ggsave("DEG_results/volc_cells.png",
+       plot = cells_volc, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/volc_super.png",
+       plot = super_volc, width = 8, height = 6, dpi = 300)
+
+# plot to markdown
+cells_volc
+super_volc
+```
+
+# clusterprofiler analysis
+
+```{r}
+# adding annotations for KEGG terms
+kegg_annotated_cells <- merge(cells_df, final_kegg[, c("query", "KEGG_ko")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+kegg_annotated_super <- merge(super_df, final_kegg[, c("query", "KEGG_ko")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+# filtering for genes that have KEGG terms and not "-" values
+kegg_annotated_cells <- kegg_annotated_cells[!is.na(kegg_annotated_cells$KEGG_ko) 
+                               & kegg_annotated_cells$KEGG_ko != "-",]
+
+kegg_annotated_super <- kegg_annotated_super[!is.na(kegg_annotated_super$KEGG_ko) 
+                               & kegg_annotated_super$KEGG_ko != "-",]
+
+# extract query ids
+extracted_cells <- kegg_annotated_cells %>%
+  filter(abs(log2FoldChange) > 1.5, pvalue < 0.05) %>%
+  pull(gene_id)
+
+extracted_super <- kegg_annotated_super %>%
+  filter(abs(log2FoldChange) > 1.5, pvalue < 0.05) %>%
+  pull(gene_id)
+```
+
+# Function
+
+```{r}
+# enrichment function
+enrichment_function <- function(extracted_genes, term2gene, term2name) {
+  enrichment_table <- enricher(
+    gene = extracted_genes,
+    TERM2GENE = term2gene,
+    TERM2NAME = term2name,
+    pvalueCutoff = 0.05,
+    pAdjustMethod = "BH",
+    qvalueCutoff = 0.05,
+    minGSSize = 10
+  )
+  return(enrichment_table)
+}
+
+# enrichment function
+enriched_cells <- enrichment_function(extracted_cells, term2gene, term2name)
+enriched_cells_df <- as.data.frame(enriched_cells)
+
+enriched_super <- enrichment_function(extracted_super, term2gene, term2name)
+enriched_super_df <- as.data.frame(enriched_super)
+
+# creating an enrichplot function
+enrich_obj <- function(results_df, gene_list, background_genes, gene_sets_list) {
+  enrichres <- new("enrichResult",
+                   readable = FALSE,
+                   result = results_df, # dataframe of enrichment results
+                   pvalueCutoff = 0.05, # 95% confidence
+                   pAdjustMethod = "BH",
+                   qvalueCutoff = 0.05, # 5% of enriched are false positives
+                   organism = "UNKNOWN",
+                   ontology = "UNKNOWN",
+                   gene = gene_list,            # tested gene list
+                   keytype = "UNKNOWN",
+                   universe = background_genes, # all genes considered
+                   gene2Symbol = character(0),
+                   geneSets = gene_sets_list)   # mapping from terms to genes
+  
+  return(enrichres)
+}
+```
+
+# Plotting
+
+```{r}
+# running our functions for each comparson
+# cells
+enrichres_cells <- enrich_obj(results = enriched_cells_df, 
+                            gene_list = extracted_cells, 
+                            background_genes = annotation_data$query, 
+                            gene_sets_list = background_kegg)
+
+class(enrichres_cells)
+# supernatant
+enrichres_super <- enrich_obj(results = enriched_super_df, 
+                            gene_list = extracted_super, 
+                            background_genes = annotation_data$query, 
+                            gene_sets_list = background_kegg)
+
+class(enrichres_super)
+
+# plot
+cells_dotplot <- dotplot(enrichres_cells) + ggtitle("Cells 24 vs. Cells 48")
+super_dotplot <- dotplot(enrichres_super) + ggtitle("Supernatant 24 vs. Supernatant 48")
+
+# saving plots
+ggsave("DEG_results/dotplot_cells.png",
+       plot = cells_dotplot, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/dotplot_super.png",
+       plot = super_dotplot, width = 8, height = 6, dpi = 300)
+
+# plot to markdown
+cells_dotplot
+super_dotplot
+```
 
