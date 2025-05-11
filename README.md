@@ -76,13 +76,23 @@ A PCA plot to demonstrate sample similarity. The clustering of sample types demo
 
 ![all_DEGs_venn](https://github.com/user-attachments/assets/9097d032-825b-4cdd-ace4-16d262c503eb)
 
+The venn diagram demonstrates the DEGs for each pair-wise comparison and how they are shared. This is a good way to get an overall snapshot of which treatments have the most unique DEGs, which treatments are most similar in terms of affect etc.. The thresholds used to create the plot are log2fold change 1.5 and adjusted p-value 0.05.
+
 ![volc_cells_24](https://github.com/user-attachments/assets/4256c84e-2c46-441a-a5ff-32a658f2f4a1)
+
+This plot demontrates the distribution of significant DEGs and how they relate to one another in the bacterial cells for 24 hour treatment of the roots. The further to the top of the plot, the more strongly expressed and significant the gene is.
 
 ![volc_cells_48](https://github.com/user-attachments/assets/8dd29cb4-45d9-4748-aee1-b86387278a12)
 
+This plot is the same concept as above, just for the 48 hour time point.
+
 ![volc_NINA_24](https://github.com/user-attachments/assets/8659d1d7-c5aa-4765-9369-d924ce1433e6)
 
+The same concept as above two plots, but now we are demonstrating the supernatant treated roots for 24 hours. We can see an overall decrease in the number of DEGs, signifying the overall impact is smaller.
+
 ![volc_NINA_48](https://github.com/user-attachments/assets/588612d1-070c-4b43-9458-c8874d3f9046)
+
+Similarly here, we demonstrate that at 48 hours of supernatant treatment, the overall number of DEGs falls again.
 
 # Citations
 
