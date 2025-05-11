@@ -72,6 +72,8 @@ The resulting counts matrix from `featurecounts` could now finally be used for d
 
 ![pca_plot](https://github.com/user-attachments/assets/d6258207-ff28-4d00-840a-0690cb4c438d)
 
+A PCA plot to demonstrate sample similarity. The clustering of sample types demonstrates strong similarity and the high value for PC1 corresponds to a majority of the variance being explained. 
+
 ![all_DEGs_venn](https://github.com/user-attachments/assets/9097d032-825b-4cdd-ace4-16d262c503eb)
 
 ![volc_cells_24](https://github.com/user-attachments/assets/4256c84e-2c46-441a-a5ff-32a658f2f4a1)
