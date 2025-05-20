@@ -46,8 +46,14 @@ if (!requireNamespace("enrichplot", quietly = TRUE))
   install.packages("enrichplot")
 if (!requireNamespace("ggrepel", quietly = TRUE))
   install.packages("ggrepel")
-if (requireNamespace("progress", quietly = ))
+if (requireNamespace("progress", quietly = TRUE))
   install.packages("progress")
+if (!requireNamespace("cowplot", quietly = TRUE))
+  install.packages("cowplot")
+if (!requireNamespace("gt", quietly = TRUE))
+  install.packages("gt")
+if (!requireNamespace("webshot2", quietly = TRUE))
+  install.packages("webshot2")
 ```
 
 # Loading Libraries
@@ -69,6 +75,9 @@ library("topGO")
 library("ggrepel")
 library("KEGGREST")
 library("progress")
+library("cowplot")
+library("gt")
+library("webshot2")
 ```
 
 # Data Import
@@ -233,12 +242,12 @@ for (comp in comparisons) {
 all_venn <- ggVennDiagram(all_degs, label_alpha = 0, edge_size = 0.5,
                           label = "count",
                           label_size = 5,
-                          category.names = c("Cells vs. Control 24H",
-                                             "Cells vs. Control 48H",
-                                             "Supernatant vs. Control 24H",
-                                             "Supernatant vs. Control 48H")) +
+                          category.names = c("A", # cells vs control 24H
+                                             "B", # cells vs control 48h
+                                             "C", # supernatant vs c 24h
+                                             "D")) + # super vs c 48
   scale_fill_distiller(palette = "Spectral") +
-  labs(title = "All Differentially Expressed Genes") +
+  labs(title = "") +
   theme(text = element_text(size = 10),
         plot.title = element_text(size = 14, hjust = 0.5, face = "bold"))
 
@@ -246,7 +255,7 @@ all_venn <- ggVennDiagram(all_degs, label_alpha = 0, edge_size = 0.5,
 fixed_venn <- all_venn + scale_x_continuous(expand = expansion(mult = 0.2))
 
 ggsave("DEG_results/all_DEGs_venn.png",
-       plot = fixed_venn, width = 8, height = 6, dpi = 300)
+       plot = fixed_venn, dpi = 600, width = 10, height = 8)
 # plot to markdown
 fixed_venn
 ```
@@ -282,12 +291,15 @@ resN48_df <- as.data.frame(resN48) %>%
 resC24_df$diffexpress <- "NO" # initializes column with no as default
 resC24_df$diffexpress[resC24_df$padj < 0.05 & resC24_df$log2FoldChange > 1.5] <- "UP"
 resC24_df$diffexpress[resC24_df$padj < 0.05 & resC24_df$log2FoldChange < -1.5] <- "DOWN"
+
 resC48_df$diffexpress <- "NO" # initializes column with no as default
 resC48_df$diffexpress[resC48_df$padj < 0.05 & resC48_df$log2FoldChange > 1.5] <- "UP"
 resC48_df$diffexpress[resC48_df$padj < 0.05 & resC48_df$log2FoldChange < -1.5] <- "DOWN"
+
 resN24_df$diffexpress <- "NO" # initializes column with no as default
 resN24_df$diffexpress[resN24_df$padj < 0.05 & resN24_df$log2FoldChange > 1.5] <- "UP"
 resN24_df$diffexpress[resN24_df$padj < 0.05 & resN24_df$log2FoldChange < -1.5] <- "DOWN"
+
 resN48_df$diffexpress <- "NO" # initializes column with no as default
 resN48_df$diffexpress[resN48_df$padj < 0.05 & resN48_df$log2FoldChange > 1.5] <- "UP"
 resN48_df$diffexpress[resN48_df$padj < 0.05 & resN48_df$log2FoldChange < -1.5] <- "DOWN"
@@ -306,7 +318,7 @@ Prints out any non-matching IDs. For some reason none of mine matched at first, 
 
 ```{r}
 # reading in our annotation file
-diamond_hits <- read.delim("filtered.tsv", sep = "\t", header = TRUE)
+#diamond_hits <- read.delim("filtered.tsv", sep = "\t", header = TRUE)
 
 # trimming white space off the columns
 diamond_hits$qseqid <- trimws(diamond_hits$qseqid)
@@ -330,11 +342,11 @@ add_delabel_top50 <- function(df) {
   
   # selects our significant genes using both values
   sig_genes <- df %>%
-    filter(abs(log2FoldChange) > 1.5, pvalue < 0.05)
+    filter(abs(log2FoldChange) > 1.5, padj < 0.05)
   
   # selects the top 25 by p-value
   top50 <- sig_genes %>%
-    arrange(pvalue) %>%
+    arrange(padj) %>%
     slice_head(n = 10)
   
   # add delabel column, label only top 50 genes
@@ -348,7 +360,6 @@ DIAMOND_resC24_df <- add_delabel_top50(DIAMOND_resC24_df)
 DIAMOND_resC48_df <- add_delabel_top50(DIAMOND_resC48_df)
 DIAMOND_resN24_df <- add_delabel_top50(DIAMOND_resN24_df)
 DIAMOND_resN48_df <- add_delabel_top50(DIAMOND_resN48_df)
-
 ```
 
 
@@ -372,8 +383,15 @@ volc_cells_24 <- ggplot(data = DIAMOND_resC24_df,
   coord_cartesian(ylim = c(0, 40), xlim = c(-10, 10)) +
   labs(color = "Legend", 
        x = expression("log"[2]*"FC"), 
-       y = expression("-log"[10]*"Adjusted p-value")) +
-  ggtitle("Cells vs. Control 24H")
+       y = expression("-log"[10]*"p-value")) +
+  ggtitle("Cells vs. Control 24H") +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
 
 volc_cells_48 <- ggplot(data = resC48_df, 
                         aes(x = log2FoldChange, 
@@ -387,8 +405,15 @@ volc_cells_48 <- ggplot(data = resC48_df,
   coord_cartesian(ylim = c(0, 40), xlim = c(-10, 10)) +
   labs(color = "Legend", 
        x = expression("log"[2]*"FC"), 
-       y = expression("-log"[10]*"Adjusted p-value")) +
-  ggtitle("Cells vs. Control 48H")
+       y = expression("-log"[10]*"p-value")) +
+  ggtitle("Cells vs. Control 48H") +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
 
 volc_NINA_24 <- ggplot(data = resN24_df, 
                        aes(x = log2FoldChange, 
@@ -402,8 +427,15 @@ volc_NINA_24 <- ggplot(data = resN24_df,
   coord_cartesian(ylim = c(0, 40), xlim = c(-10, 10)) +
   labs(color = "Legend", 
        x = expression("log"[2]*"FC"), 
-       y = expression("-log"[10]*"Adjusted p-value")) +
-  ggtitle("Supernatant vs. Control 24H")
+       y = expression("-log"[10]*"p-value")) +
+  ggtitle("Supernatant vs. Control 24H") +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
 
 volc_NINA_48 <- ggplot(data = resN48_df, 
                        aes(x = log2FoldChange, y = -log10(padj), col = diffexpress)) +
@@ -415,18 +447,21 @@ volc_NINA_48 <- ggplot(data = resN48_df,
   coord_cartesian(ylim = c(0, 40), xlim = c(-10, 10)) +
   labs(color = "Legend", 
        x = expression("log"[2]*"FC"), 
-       y = expression("-log"[10]*"Adjusted p-value")) +
-  ggtitle("Supernatant vs. Control 48H")
+       y = expression("-log"[10]*"p-value")) +
+  ggtitle("Supernatant vs. Control 48H") +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
 
-# save plots
-ggsave("DEG_results/volc_cells_24.png",
-       plot = volc_cells_24, width = 8, height = 6, dpi = 300)
-ggsave("DEG_results/volc_cells_48.png",
-       plot = volc_cells_48, width = 8, height = 6, dpi = 300)
-ggsave("DEG_results/volc_NINA_24.png",
-       plot = volc_NINA_24, width = 8, height = 6, dpi = 300)
-ggsave("DEG_results/volc_NINA_48.png",
-       plot = volc_NINA_48, width = 8, height = 6, dpi = 300)
+# save
+#ggsave("thesis/cellsv24.png", plot = volc_cells_24, dpi = 600, width = 10, height = 8)
+#ggsave("thesis/cellsv48.png", plot = volc_cells_48, dpi = 600, width = 10, height = 8)
+#ggsave("thesis/superv24.png", plot = volc_NINA_24, dpi = 600, width = 10, height = 8)
+#ggsave("thesis/superv48.png", plot = volc_NINA_48, dpi = 600, width = 10, height = 8)
 
 # plot to markdown
 volc_cells_24
@@ -434,14 +469,31 @@ volc_cells_48
 volc_NINA_24
 volc_NINA_48
 ```
+# Merging plots into one multipanel figure
 
-# Pathway Enrichment Analysis using clusterprofiler
+This is done using cowplot
 
-Going to be using ClusterProfiler and a tutorial/blog post I found. God bless the bioinformatics community. tidyr used for file cleanup. 
+```{r}
+# cleanup legends
+volc_cells_24 <- volc_cells_24 + theme(legend.position = "none")
+volc_cells_48 <- volc_cells_48 + theme(legend.position = "none")
+volc_NINA_24 <- volc_NINA_24  + theme(legend.position = "none")
+volc_NINA_48 <- volc_NINA_48 + theme(legend.position = "none")
 
-We need to extract genes that have KEGG annotations to make the gene lists and gene universe/background. Otherwise it will water down our analysis which I think happened with the GO term enrichment.
+comb_volc_first <- plot_grid(volc_cells_24, volc_cells_48, volc_NINA_24, volc_NINA_48, 
+                             labels = c("A","B","C","D"),
+                             ncol = 2,
+                             align = "hv")
+# save plot
+ggsave("DEG_results/final_volcano_clean.png", 
+       plot = comb_volc_first, dpi = 600, width = 10, height = 8)
 
-So originally, i just used the raw koterm_example from the $KEGG_Pathway eggnog-annotation, i think it would be better to make my own kegg pathway mappings given the $KO_terms instead, itll give me more control and help catch any pathways that might be missing.
+# plot to markdown
+comb_volc_first
+```
+
+
+# Loading in eggnog mapper annotations
 
 ```{r}
 # Load in our data
@@ -451,259 +503,6 @@ annotation_data <- read.delim("dups_removed_viridae.tsv", sep = "\t", header = T
 
 # colnames(annotation_data)[1] <- gsub("^X\\.", "", colnames(annotation_data)[1])
 # run this if the column names import all funny
-
-# selecting columns of interest
-kegg_data <- annotation_data[c(1,13)] # the KEGG_ko column is index 12
-kegg_data <- kegg_data[kegg_data$KEGG_Pathway != "-", ]
-kegg_data$KEGG_Pathway <- gsub("ko", "map", kegg_data$KEGG_Pathway) # changes ko terms to map terms
-final_kegg <- kegg_data
-write.csv(final_kegg, "needs_formatting_kegg.tsv", quote = TRUE, row.names = FALSE)
-```
-
-# Reformatting
-
-So the pathway enrichment has not been going too well, because KO terms map to a braod array of non relevant pathways, the custom annotations I am trying to make end up enriching for random pathways like cancer prevention, retinol metabolism, etc. Non plant stuff, so I am going to try something different.
-
-In the previous code chunk I reformatted that pathways column KEGG_Pathway so that all the terms start with map. koblank and mapblank are interchangeable when it comes to searching for pathways so either or couldve worked, all I need is consitency accross the terms. Now I am gonna use a python script to collapse duplicates for each column so I don't skew my enrichment and reload the data.
-
-The next part will be trial and error but I am going to gsub out all the non-relevant pathways that got annotated from eggnogg mapper, so human, mouse stuff. That is gonna take some trial and error so we will see how long this takes.
-
-Alright so this is not going to work at alll, I either need to find a better way to annotate KEGG terms or just ignore them for now.
-
-```{r}
-# load reformaatted data
-final_kegg <- read.delim("formatted_dups_removed_keggs.tsv", sep = "\t", check.names = FALSE, header = TRUE)
-```
-
-
-# Making our custom KO pathway mappings
-
-I had my friend chat help with this, restuctured the old script to take our new aproach. A bunch of boiler plate I did not want to do by hand.
-
-```{r}
-# expand KEGG_Pathway field to long format
-gene2pathway <- final_kegg %>%
-  filter(!is.na(KEGG_Pathway) & KEGG_Pathway != "-") %>%
-  select(query, KEGG_Pathway) %>%
-  separate_rows(KEGG_Pathway, sep = ",") %>%
-  mutate(
-    KEGG_Pathway = trimws(KEGG_Pathway),
-    Pathway_ID = KEGG_Pathway
-  ) %>%
-  select(query, Pathway_ID)
-
-# map Pathway_ID → Description (with retries + progress)
-unique_maps <- unique(gene2pathway$Pathway_ID)
-
-pb <- progress_bar$new(
-  format = "[:bar] :current/:total :percent pathway: :message",
-  total = length(unique_maps), clear = FALSE, width = 60
-)
-
-failed_maps <- c()
-pathway_name_list <- list()
-
-for (map_id in unique_maps) {
-  pb$tick(tokens = list(message = map_id))
-  attempt <- 1
-  max_retries <- 3
-  res <- NULL
-
-  while (attempt <= max_retries) {
-    Sys.sleep(0.5)
-    res <- tryCatch({
-      keggFind("pathway", map_id)
-    }, error = function(e) NULL)
-
-    if (!is.null(res) && length(res) > 0) break
-    attempt <- attempt + 1
-  }
-
-  if (!is.null(res) && length(res) > 0) {
-    pathway_name_list[[map_id]] <- data.frame(
-      Pathway_ID = map_id,
-      Pathway_Desc = unname(res),
-      stringsAsFactors = FALSE
-    )
-  } else {
-    failed_maps <- c(failed_maps, map_id)
-  }
-}
-
-term2name <- bind_rows(pathway_name_list)
-
-# final formatting for clusterProfiler
-term2gene <- unique(gene2pathway)
-term2gene <- term2gene[c(2,1)]
-
-# baackground gene set for custom enrichment
-background_kegg <- split(term2gene$query, term2gene$Pathway_ID)
-
-# sanity checks
-head(term2gene)
-head(term2name)
-
-# alrighty figured it out
-# the order for term2gene needs to be Pathway_ID first then query
-# so run this after this code chunk
-# term2gene <- term2gene(c(2,1))
-
-# then run for a sanity check
-# head(term2gene)
-```
-
-
-# Extract genes of interest
-
-Here we need to extract the genes we are interested in, I am picking only the genes that are fold change 1.5 and p-val 0.05. Quite stringent. Dplyr for data wrangling again
-
-```{r, echo=FALSE,message=FALSE}
-# trim whitespace for matching
-final_kegg$query <- trimws(final_kegg$query)
-final_kegg$KEGG_Pathway <- trimws(final_kegg$KEGG_Pathway)
-# adding annotations for KEGG terms
-kegg_annotated_C24 <- merge(resC24_df, final_kegg[, c("query", "KEGG_Pathway")], by.x = "gene_id", by.y = "query", all.x = TRUE)
-kegg_annotated_C48 <-merge(resC48_df, final_kegg[, c("query", "KEGG_Pathway")], by.x = "gene_id", by.y = "query", all.x = TRUE)
-kegg_annotated_N24 <- merge(resN24_df, final_kegg[, c("query", "KEGG_Pathway")], by.x = "gene_id", by.y = "query", all.x = TRUE)
-kegg_annotated_N48 <- merge(resN48_df, final_kegg[, c("query", "KEGG_Pathway")], by.x = "gene_id", by.y = "query", all.x = TRUE)
-
-# filtering for genes that have KEGG terms and not "-" values
-kegg_annotated_C24 <- kegg_annotated_C24[!is.na(kegg_annotated_C24$KEGG_Pathway) 
-                               & kegg_annotated_C24$KEGG_Pathway != "-",]
-
-kegg_annotated_C48 <- kegg_annotated_C48[!is.na(kegg_annotated_C48$KEGG_Pathway) 
-                               & kegg_annotated_C48$KEGG_Pathway != "-",]
-
-kegg_annotated_N24 <- kegg_annotated_N24[!is.na(kegg_annotated_N24$KEGG_Pathway) 
-                               & kegg_annotated_N24$KEGG_Pathway != "-",]
-
-kegg_annotated_N48 <- kegg_annotated_N48[!is.na(kegg_annotated_N48$KEGG_Pathway) 
-                               & kegg_annotated_N48$KEGG_Pathway != "-",]
-
-# extract query ids
-extracted_C24 <- kegg_annotated_C24 %>%
-  filter(abs(log2FoldChange) > 1.5, padj < 0.05) %>%
-  pull(gene_id)
-
-extracted_C48 <- kegg_annotated_C48 %>%
-  filter(abs(log2FoldChange) > 1.5, padj < 0.05) %>%
-  pull(gene_id)
-
-extracted_N24 <- kegg_annotated_N24 %>%
-  filter(abs(log2FoldChange) > 1.5, padj < 0.05) %>%
-  pull(gene_id)
-
-extracted_N48 <- kegg_annotated_N48 %>%
-  filter(abs(log2FoldChange) > 1.5, padj < 0.05) %>%
-  pull(gene_id)
-```
-
-
-# We should be good to go
-
-All the mappings are prepped, the GOIs are extracted, it should be good to go for enrichment.
-
-```{r}
-# enrichment function
-# Enrichment function with TERM2GENE and TERM2NAME as arguments
-enrichment_function <- function(extracted_genes, term2gene, term2name) {
-  enrichment_table <- enricher(
-    gene = extracted_genes,
-    TERM2GENE = term2gene,
-    TERM2NAME = term2name,
-    pvalueCutoff = 0.05,
-    pAdjustMethod = "BH",
-    qvalueCutoff = 0.05,
-    minGSSize = 10
-  )
-  return(enrichment_table)
-}
-
-# running comparisons
-enriched_C24 <- enrichment_function(extracted_C24, term2gene, term2name)
-enriched_C24_df <- as.data.frame(enriched_C24)
-
-enriched_C48 <- enrichment_function(extracted_C48, term2gene, term2name)
-enriched_C48_df <- as.data.frame(enriched_C48)
-
-enriched_N24 <- enrichment_function(extracted_N24, term2gene, term2name)
-enriched_N24_df <- as.data.frame(enriched_N24)
-
-enriched_N48 <- enrichment_function(extracted_N48, term2gene, term2name)
-enriched_N48_df <- as.data.frame(enriched_N48)
-
-# enrichplot object for plotting
-enrich_obj <- function(results_df, gene_list, background_genes, gene_sets_list) {
-  enrichres <- new("enrichResult",
-                   result = results_df,
-                   pvalueCutoff = 0.05,
-                   pAdjustMethod = "BH",
-                   qvalueCutoff = 0.05,
-                   gene = gene_list,
-                   universe = background_genes,
-                   geneSets = gene_sets_list,
-                   keytype = "UNKNOWN",
-                   organism = "ko",
-                   ontology = "KEGG",
-                   readable = FALSE,
-                   gene2Symbol = setNames(gene_list, gene_list)) # fallback mapping
-  return(enrichres)
-}
-```
-
-# Creating enrichres objects for plotting using enrichplot
-
-```{r}
-# running our functions for each comparson
-enrichres_C24 <- enrich_obj(results_df = enriched_C24_df, 
-                            gene_list = extracted_C24, 
-                            background_genes = annotation_data$query, # all the genes in our RNA seq experiment
-                            gene_sets_list = background_kegg) # custom gene set we made earlier
-
-class(enrichres_C24)
-# c48
-enrichres_C48 <- enrich_obj(results_df = enriched_C48_df, 
-                            gene_list = extracted_C48, 
-                            background_genes = annotation_data$query, 
-                            gene_sets_list = background_kegg)
-
-class(enrichres_C48)
-# n24
-enrichres_N24 <- enrich_obj(results_df = enriched_N24_df, 
-                            gene_list = extracted_N24, 
-                            background_genes = annotation_data$query, 
-                            gene_sets_list = background_kegg)
-
-class(enrichres_N24)
-# n48
-enrichres_N48 <- enrich_obj(results_df = enriched_N48_df, 
-                            gene_list = extracted_N48, 
-                            background_genes = annotation_data$query, 
-                            gene_sets_list = background_kegg)
-
-class(enrichres_N48)
-
-# plot
-C24_dotplot <- dotplot(enrichres_C24) + ggtitle("Cell vs. Control 24H")
-C48_dotplot <- dotplot(enrichres_C48) + ggtitle("Cell vs. Control 48H")
-N24_dotplot <- dotplot(enrichres_N24) + ggtitle("Supernatant vs. Control 24H")
-N48_dotplot <- dotplot(enrichres_N48) + ggtitle("Supernatant vs. Control 48H")
-
-# saving plots
-ggsave("DEG_results/dotplot_kegg_C24.png",
-       plot = C24_dotplot, width = 8, height = 6, dpi = 300)
-ggsave("DEG_results/dotplot_kegg_C48.png",
-       plot = C48_dotplot, width = 8, height = 6, dpi = 300)
-ggsave("DEG_results/dotplot_kegg_N24.png",
-       plot = N24_dotplot, width = 8, height = 6, dpi = 300)
-ggsave("DEG_results/dotplot_kegg_N48.png",
-       plot = N48_dotplot, width = 8, height = 6, dpi = 300)
-
-# plot to markdown
-C24_dotplot
-C48_dotplot
-N24_dotplot
-N48_dotplot
 ```
 
 # Gonna give GO analysis another GO badum tss, prep work part 1
@@ -736,6 +535,19 @@ go_C24 <- go_C24[!is.na(go_C24$GOs),]
 go_C48 <- go_C48[!is.na(go_C48$GOs),]
 go_N24 <- go_N24[!is.na(go_N24$GOs),]
 go_N48 <- go_N48[!is.na(go_N48$GOs),]
+
+# extract genes with logfold of abs 2
+go_C24 <- go_C24 %>%
+  filter(abs(log2FoldChange) > 1.5)
+
+go_C48 <- go_C48 %>%
+  filter(abs(log2FoldChange) > 1.5)
+
+go_N24 <- go_N24 %>%
+  filter(abs(log2FoldChange) > 1.5)
+
+go_N48 <- go_N48 %>%
+  filter(abs(log2FoldChange) > 1.5)
 
 # Extract gene IDs and p-values
 Cp24 <- dplyr::select(go_C24, gene_id,padj)
@@ -1035,15 +847,14 @@ tab_Np48_cc <- get_enrich_table(Np48_go_cc,
                                 ks_Np48_cc,
                                 ks_elim_Np48_cc)
 ```
+
 # Plotting Bar Plot
 
-Some standard ggplots for enriched GO functions. The p-values are different for each one 
-which is why I think something is not quite right in the process. I may need to play around
-with the Fisher's test, table, and plot functions to figure out what is going on.
+Some standard ggplots for enriched GO functions. Tables need to be ordered prior to plotting.
 
 ```{r}
 # plotting function
-plot_enrich_bar <- function(enrich_tab, title = "Enriched Terms") {
+plot_enrich_bar <- function(enrich_tab, title = "") {
   enrich_tab <- enrich_tab %>%
     filter(pvalue < 0.05) %>% # filters out non-significant genes
     arrange(pvalue) %>% # arranges bars by p-value
@@ -1091,31 +902,31 @@ go_CC_graph_N48 <- plot_enrich_bar(tab_Np48_cc, "CC Supernatant vs. Control 48H"
 
 # saving graphs
 ggsave("DEG_results/go_MF_C24.png",
-       plot = go_MF_graph_C24, width = 8, height = 6, dpi = 300)
+       plot = go_MF_graph_C24, dpi = 600, width = 10, height = 8)
 ggsave("DEG_results/go_MF_C48.png",
-       plot = go_MF_graph_C48, width = 8, height = 6, dpi = 300)
+       plot = go_MF_graph_C48, dpi = 600, width = 10, height = 8)
 ggsave("DEG_results/go_MF_N24.png",
-       plot = go_MF_graph_N24, width = 8, height = 6, dpi = 300)
+       plot = go_MF_graph_N24, dpi = 600, width = 10, height = 8)
 ggsave("DEG_results/go_MF_N48.png",
-       plot = go_MF_graph_n48, width = 8, height = 6, dpi = 300)
+       plot = go_MF_graph_n48, dpi = 600, width = 10, height = 8)
 
 ggsave("DEG_results/go_bp_C24.png",
-       plot = go_bp_graph_C24, width = 8, height = 6, dpi = 300)
+       plot = go_bp_graph_C24, dpi = 600, width = 10, height = 8)
 ggsave("DEG_results/go_bp_C48.png",
-       plot = go_bp_graph_C48, width = 8, height = 6, dpi = 300)
+       plot = go_bp_graph_C48, dpi = 600, width = 10, height = 8)
 ggsave("DEG_results/go_bp_N24.png",
-       plot = go_bp_graph_N24, width = 8, height = 6, dpi = 300)
+       plot = go_bp_graph_N24, dpi = 600, width = 10, height = 8)
 ggsave("DEG_results/go_bp_N48.png",
-       plot = go_bp_graph_N48, width = 8, height = 6, dpi = 300)
+       plot = go_bp_graph_N48, dpi = 600, width = 10, height = 8)
 
 ggsave("DEG_results/go_CC_C24.png",
-       plot = go_CC_graph_C24, width = 8, height = 6, dpi = 300)
+       plot = go_CC_graph_C24, dpi = 600, width = 10, height = 8)
 ggsave("DEG_results/go_CC_C48.png",
-       plot = go_CC_graph_C48, width = 8, height = 6, dpi = 300)
+       plot = go_CC_graph_C48, dpi = 600, width = 10, height = 8)
 ggsave("DEG_results/go_CC_N24.png",
-       plot = go_CC_graph_N24, width = 8, height = 6, dpi = 300)
+       plot = go_CC_graph_N24, dpi = 600, width = 10, height = 8)
 ggsave("DEG_results/go_CC_N48.png",
-       plot = go_CC_graph_N48, width = 8, height = 6, dpi = 300)
+       plot = go_CC_graph_N48, dpi = 600, width = 10, height = 8)
 
 # plot to markdown
 go_MF_graph_C24
@@ -1133,6 +944,275 @@ go_CC_graph_C48
 go_CC_graph_N24
 go_CC_graph_N48
 ```
+
+# COG Distribution
+
+So kegg pathway enrichment did not work in the slightest, the KEGG terms are not biologically relevant at all for whatever reason, not exactly sure if I can find a different annotation tool and redo the analysis but it is what it is.
+
+Instead I am going to do something a little more basic and plot the distribution of COG terms for the DEGS, this will provide some useful information about the generic processes occurring.
+
+```{r}
+# pulling out all upregulated DEGs
+upreg_C24 <- resC24_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.5)
+
+upreg_C48 <- resC48_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.05)
+
+upreg_N24 <- resN24_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.05)
+
+upreg_N48 <- resN48_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.05)
+
+# same with downreg
+downreg_C24 <- resC24_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05)
+
+downreg_C48 <- resC48_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05)
+
+downreg_N24 <- resN24_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05)
+
+downreg_N48 <- resN48_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05)
+```
+
+# Adding COG terms
+
+```{r}
+upreg_C24 <- merge(upreg_C24, annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+upreg_C48 <- merge(upreg_C48, annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+upreg_N24 <- merge(upreg_N24, annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+upreg_N48 <- merge(upreg_N48, annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+downreg_C24 <- merge(downreg_C24, annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+downreg_C48 <- merge(downreg_C48, annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+downreg_N24 <- merge(downreg_N24,annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+downreg_N48 <- merge(downreg_N48,annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+```
+
+# Filter out the non matches
+
+```{r}
+upreg_C24 <- upreg_C24 %>%
+  filter(COG_category != "-")
+
+upreg_C48 <- upreg_C48 %>%
+  filter(COG_category != "-")
+
+upreg_N24 <- upreg_N24 %>%
+  filter(COG_category != "-")
+
+upreg_N48 <- upreg_N48 %>%
+  filter(COG_category != "-")
+
+downreg_C24 <- downreg_C24 %>%
+  filter(COG_category != "-")
+
+downreg_C48 <- downreg_C48 %>%
+  filter(COG_category != "-")
+
+downreg_N24 <- downreg_N24 %>%
+  filter(COG_category != "-")
+
+downreg_N48 <- downreg_N48 %>%
+  filter(COG_category != "-")
+```
+
+# Making our Bar plots for upreg COGs
+
+```{r}
+# creating our bar plots
+cog_bar_c24 <- ggplot(data = upreg_C24, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  scale_fill_viridis_d(option = "C") +
+  labs(
+    title = "Upregulated COG Categories: Cells vs. Control 24H",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+cog_bar_c48 <- ggplot(data = upreg_C48, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  scale_fill_viridis_d(option = "C") +
+  labs(
+    title = "Upregulated COG Categories: Cells vs. Control 48H",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+cog_bar_n24 <- ggplot(data = upreg_N24, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  scale_fill_viridis_d(option = "C") +
+  labs(
+    title = "Upregulated COG Categories: Supernatant vs. Control 24H",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+cog_bar_n48 <- ggplot(data = upreg_N48, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  scale_fill_viridis_d(option = "C") +
+  labs(
+    title = "Upregulated COG Categories: Supernatant vs. Control 48H",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+# save files
+#ggsave("DEG_results/up_cogs_c24.png", plot = cog_bar_c24, dpi = 600, width = 10, height = 8)
+#ggsave("DEG_results/up_cogs_c48.png", plot = cog_bar_c48, dpi = 600, width = 10, height = 8)
+#ggsave("DEG_results/up_cogs_n24.png", plot = cog_bar_n24, dpi = 600, width = 10, height = 8)
+#ggsave("DEG_results/up_cogs_n48.png", plot = cog_bar_n48, dpi = 600, width = 10, height = 8)
+
+# plot to markdown
+cog_bar_c24
+cog_bar_c48
+cog_bar_n24
+cog_bar_n48
+```
+# Saving as multipanel figure
+
+```{r}
+cog_first <- plot_grid(cog_bar_c24, cog_bar_c48, cog_bar_n24, cog_bar_n48, 
+                             labels = c("A","B","C","D"),
+                             ncol = 2,
+                             align = "hv")
+# save plot
+#ggsave("DEG_results/first_cog.pdf", 
+       #plot = cog_first, width = 12, height = 8)
+
+# plot to markdown
+cog_first
+```
+
+
+# Plotting downreg
+
+```{r}
+# creating our bar plots
+cog_bar_c24D <- ggplot(data = downreg_C24, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  geom_text(stat='count', aes(label=..count..), vjust=-0.3, size=3.5) +  # add count labels
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = "Downregulated COG Categories: Cells vs. Control 24",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+cog_bar_c48D <- ggplot(data = downreg_C48, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  geom_text(stat='count', aes(label=..count..), vjust=-0.3, size=3.5) +  # add count labels
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = "Downregulated COG Categories: Cells vs. Control 48",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+cog_bar_n24D <- ggplot(data = downreg_N24, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  geom_text(stat='count', aes(label=..count..), vjust=-0.3, size=3.5) +  # add count labels
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = "Downregulated COG Categories: Supernatant vs. Control 24",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+cog_bar_n48D <- ggplot(data = downreg_N48, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  geom_text(stat='count', aes(label=..count..), vjust=-0.3, size=3.5) +  # add count labels
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = "Downregulated COG Categories: Supernatant vs. Control 48",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+# save files
+ggsave("DEG_results/down_cogs_c24.png",
+       plot = cog_bar_c24D, dpi = 600, width = 10, height = 8)
+ggsave("DEG_results/down_cogs_c48.png",
+       plot = cog_bar_c48D, dpi = 600, width = 10, height = 8)
+ggsave("DEG_results/down_cogs_n24.png",
+       plot = cog_bar_n24D, dpi = 600, width = 10, height = 8)
+ggsave("DEG_results/down_cogs_n48.png",
+       plot = cog_bar_n48D, dpi = 600, width = 10, height = 8)
+
+# plot to markdown
+cog_bar_c24D
+cog_bar_c48D
+cog_bar_n24D
+cog_bar_n48D
+```
+
+
 # Redo of analysis with different pairwise comparisons
 
 Alrighty so we got our data analysis down pretty pat. Now I want to compare the different time points to each other
@@ -1157,7 +1237,7 @@ cells_dds <- DESeqDataSetFromMatrix(countData = cells_time_frame,
 
 # sets the comparisons, in this case the coldata column name is Treatment,
 # the reference is named cells48, I am gonna try this and see how it goes
-cells_dds$Treatment <- relevel(cells_dds$Treatment, ref = "cells48")
+cells_dds$Treatment <- relevel(cells_dds$Treatment, ref = "cells24")
 
 # no clue what this does, manual said to tho
 # prints the dataframe i suppose?
@@ -1204,7 +1284,7 @@ super_dds <- DESeqDataSetFromMatrix(countData = supernat_time_frame,
 
 # sets the comparisons, in this case the coldata column name is Treatment,
 # the reference is named cells48, I am gonna try this and see how it goes
-super_dds$Treatment <- relevel(super_dds$Treatment, ref = "NINA48")
+super_dds$Treatment <- relevel(super_dds$Treatment, ref = "NINA24")
 
 # no clue what this does, manual said to tho
 # prints the dataframe i suppose?
@@ -1279,8 +1359,15 @@ cells_volc <- ggplot(data = cells_df,
   coord_cartesian(ylim = c(0, 75), xlim = c(-10, 10)) +
   labs(color = "Legend", 
        x = expression("log"[2]*"FC"), 
-       y = expression("-log"[10]*"Adjusted p-value")) +
-  ggtitle("Cells 24 vs. Cells 48")
+       y = expression("-log"[10]*"p-value")) +
+  ggtitle("Cells 48 vs. Cells 24") +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
 
 super_volc <- ggplot(data = super_df, 
                         aes(x = log2FoldChange, 
@@ -1294,119 +1381,709 @@ super_volc <- ggplot(data = super_df,
   coord_cartesian(ylim = c(0, 40), xlim = c(-10, 10)) +
   labs(color = "Legend", 
        x = expression("log"[2]*"FC"), 
-       y = expression("-log"[10]*"Adjusted p-value")) +
-  ggtitle("Supernatant 24 vs. Supernatant 48")
-
-# save plots
-ggsave("DEG_results/volc_cells.png",
-       plot = cells_volc, width = 8, height = 6, dpi = 300)
-ggsave("DEG_results/volc_super.png",
-       plot = super_volc, width = 8, height = 6, dpi = 300)
+       y = expression("-log"[10]*"p-value")) +
+  ggtitle("Supernatant 48 vs. Supernatant 24") +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
 
 # plot to markdown
 cells_volc
 super_volc
 ```
-
-# clusterprofiler analysis
+# Combo figure time
 
 ```{r}
-# adding annotations for KEGG terms
-kegg_annotated_cells <- merge(cells_df, final_kegg[, c("query", "KEGG_ko")], by.x = "gene_id", by.y = "query", all.x = TRUE)
-kegg_annotated_super <- merge(super_df, final_kegg[, c("query", "KEGG_ko")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+# removing legend
+cells_volc <- cells_volc + theme(legend.position = "none")
+super_volc <- super_volc + theme(legend.position = "none")
 
-# filtering for genes that have KEGG terms and not "-" values
-kegg_annotated_cells <- kegg_annotated_cells[!is.na(kegg_annotated_cells$KEGG_ko) 
-                               & kegg_annotated_cells$KEGG_ko != "-",]
+second_volc <- plot_grid(cells_volc, super_volc,
+                         labels = c("A","B"),
+                         ncol = 2,
+                         align = "hv")
+# saving plot
+ggsave("DEG_results/second_volc.png", 
+       plot = second_volc, dpi = 600, width = 10, height = 8)
 
-kegg_annotated_super <- kegg_annotated_super[!is.na(kegg_annotated_super$KEGG_ko) 
-                               & kegg_annotated_super$KEGG_ko != "-",]
-
-# extract query ids
-extracted_cells <- kegg_annotated_cells %>%
-  filter(abs(log2FoldChange) > 1.5, pvalue < 0.05) %>%
-  pull(gene_id)
-
-extracted_super <- kegg_annotated_super %>%
-  filter(abs(log2FoldChange) > 1.5, pvalue < 0.05) %>%
-  pull(gene_id)
+second_volc
 ```
 
-# Function
+
+# Adding Diamond annotations
 
 ```{r}
-# enrichment function
-enrichment_function <- function(extracted_genes, term2gene, term2name) {
-  enrichment_table <- enricher(
-    gene = extracted_genes,
-    TERM2GENE = term2gene,
-    TERM2NAME = term2name,
-    pvalueCutoff = 0.05,
-    pAdjustMethod = "BH",
-    qvalueCutoff = 0.05,
-    minGSSize = 10
-  )
-  return(enrichment_table)
+# function to add annotations to results dataframe
+add_diamond_annotations <- function(res_df, diamond_df) {
+  merge(res_df, diamond_df[, c("qseqid", "sseqid", "stitle")],
+        by.x = "gene_id", by.y = "qseqid", all.x = TRUE) # uses a left join (all.x)
 }
 
-# enrichment function
-enriched_cells <- enrichment_function(extracted_cells, term2gene, term2name)
-enriched_cells_df <- as.data.frame(enriched_cells)
+# running our function for each data frame
+DIAMOND_cells_df <- add_diamond_annotations(cells_df, diamond_hits)
+DIAMOND_super_df <- add_diamond_annotations(super_df, diamond_hits)
 
-enriched_super <- enrichment_function(extracted_super, term2gene, term2name)
-enriched_super_df <- as.data.frame(enriched_super)
-
-# creating an enrichplot function
-enrich_obj <- function(results_df, gene_list, background_genes, gene_sets_list) {
-  enrichres <- new("enrichResult",
-                   readable = FALSE,
-                   result = results_df, # dataframe of enrichment results
-                   pvalueCutoff = 0.05, # 95% confidence
-                   pAdjustMethod = "BH",
-                   qvalueCutoff = 0.05, # 5% of enriched are false positives
-                   organism = "UNKNOWN",
-                   ontology = "UNKNOWN",
-                   gene = gene_list,            # tested gene list
-                   keytype = "UNKNOWN",
-                   universe = background_genes, # all genes considered
-                   gene2Symbol = character(0),
-                   geneSets = gene_sets_list)   # mapping from terms to genes
+# adding a new column with only upregulated genes for labeling
+add_delabel_top50 <- function(df) {
   
-  return(enrichres)
+  # selects our significant genes using both values
+  sig_genes <- df %>%
+    filter(abs(log2FoldChange) > 1.5, pvalue < 0.05)
+  
+  # selects the top 25 by p-value
+  top50 <- sig_genes %>%
+    arrange(pvalue) %>%
+    slice_head(n = 10)
+  
+  # add delabel column, label only top 50 genes
+  df$delabel <- ifelse(df$sseqid %in% top50$sseqid, df$sseqid, NA)
+  
+  return(df)
 }
+
+# Apply to your dataframes
+DIAMOND_cells_df <- add_delabel_top50(DIAMOND_cells_df)
+DIAMOND_super_df <- add_delabel_top50(DIAMOND_super_df)
+```
+
+# Go enrichment
+
+```{r}
+# making a frame with only the genes with GO terms
+go_cells <- merge(cells_df, go_terms[, c("query", "GOs")], 
+                by.x = "gene_id", 
+                by.y = "query", 
+                all.x = TRUE)
+
+go_super <-merge(super_df, go_terms[, c("query", "GOs")], 
+               by.x = "gene_id", 
+               by.y = "query", 
+               all.x = TRUE)
+
+# filter out any genes with no GO term
+go_cells <- go_cells[!is.na(go_cells$GOs),]
+go_super <- go_super[!is.na(go_super$GOs),]
+
+# filter by log fold change
+go_cells <- go_cells %>%
+  filter(abs(log2FoldChange) > 1.5)
+
+go_super <- go_super %>%
+  filter(abs(log2FoldChange) > 1.5)
+
+# Extract gene IDs and p-values
+Cells_GO <- dplyr::select(go_cells, gene_id,padj)
+Super_GO <- dplyr::select(go_super, gene_id,padj)
+
+# sort by p-value
+sorted_Cells <- Cells_GO[order(go_cells$padj),]
+sorted_Super <- Super_GO[order(go_super$padj),]
+
+# convert to topGOs genelist format
+topgo_Cells <- sorted_Cells$padj
+topgo_Super <- sorted_Super$padj
+
+# name the topgo vector
+names(topgo_Cells) <- sorted_Cells$gene_id
+names(topgo_Super) <- sorted_Super$gene_id
+
+# filtering value
+padj_cut <- 0.05
+
+# functions for filtering significant genes
+topCells_func <- function(x) {
+  return(x <= padj_cut)
+}
+
+topSuper_func <- function(x) {
+  return(x <= padj_cut)
+}
+```
+
+# Go enrichment function
+
+```{r, echo=FALSE, message=FALSE}
+# creating GO data objects for molecular function
+Cells_go_mf <- new("topGOdata", 
+               ontology = "MF", 
+               allGenes = topgo_Cells, 
+               annot = annFUN.gene2GO, 
+               geneSel = topCells_func,
+               gene2GO = gene2goMappings)
+
+Super_go_mf <- new("topGOdata",
+               ontology = "MF",
+               allGenes = topgo_Super,
+               annot = annFUN.gene2GO,
+               geneSel = topSuper_func,
+               gene2GO = gene2goMappings)
+
+# creating GO data objects for biological process
+Cells_go_bp <- new("topGOdata", 
+               ontology = "BP", 
+               allGenes = topgo_Cells, 
+               annot = annFUN.gene2GO, 
+               geneSel = topCells_func,
+               gene2GO = gene2goMappings)
+
+Super_go_bp <- new("topGOdata",
+               ontology = "BP",
+               allGenes = topgo_Super,
+               annot = annFUN.gene2GO,
+               geneSel = topSuper_func,
+               gene2GO = gene2goMappings)
+
+# creating GO data objects for cellular component
+Cells_go_cc <- new("topGOdata", 
+               ontology = "CC", 
+               allGenes = topgo_Cells, 
+               annot = annFUN.gene2GO, 
+               geneSel = topCells_func,
+               gene2GO = gene2goMappings)
+
+Super_go_cc <- new("topGOdata",
+               ontology = "CC",
+               allGenes = topgo_Super,
+               annot = annFUN.gene2GO,
+               geneSel = topSuper_func,
+               gene2GO = gene2goMappings)
+```
+# Fishers test
+
+```{r, echo=FALSE, message=FALSE}
+# Enrichment tests for Molecular Function Fisher
+fisher_cells_mf <- runTest(Cells_go_mf, algorithm = "weight01", statistic = "fisher")
+fisher_super_mf <- runTest(Super_go_mf, algorithm = "weight01", statistic = "fisher")
+
+# Enrichment tests for Biological Process Fisher
+fisher_cells_bp <- runTest(Cells_go_bp, algorithm = "weight01", statistic = "fisher")
+fisher_super_bp <- runTest(Super_go_bp, algorithm = "weight01", statistic = "fisher")
+
+# Enrichment tests for Cellular Component Fisher
+fisher_cells_cc <- runTest(Cells_go_cc, algorithm = "weight01", statistic = "fisher")
+fisher_super_cc <- runTest(Super_go_cc, algorithm = "weight01", statistic = "fisher")
+
+# Enrichment tests for Molecular Function Kolmogrov-Smirnov
+ks_cells_mf <- runTest(Cells_go_mf, algorithm = "classic", statistic = "ks")
+ks_super_mf <- runTest(Super_go_mf, algorithm = "classic", statistic = "ks")
+
+# Enrichment tests for Biological Process Kolmogrov-Smirnov
+ks_cells_bp <- runTest(Cells_go_bp, algorithm = "classic", statistic = "ks")
+ks_super_bp <- runTest(Super_go_bp, algorithm = "classic", statistic = "ks")
+
+# Enrichment tests for Cellular Component Kolmogrov-Smirnov
+ks_cells_cc <- runTest(Cells_go_cc, algorithm = "classic", statistic = "ks")
+ks_super_cc <- runTest(Super_go_cc, algorithm = "classic", statistic = "ks")
+
+# Enrichment tests for Molecular Function Kolmogrov-Smirnov-Elim
+ks_elim_cells_mf <- runTest(Cells_go_mf, algorithm = "elim", statistic = "ks")
+ks_elim_super_mf <- runTest(Super_go_mf, algorithm = "elim", statistic = "ks")
+
+# Enrichment tests for Biological Process Kolmogrov-Smirnov-Elim
+ks_elim_cells_bp <- runTest(Cells_go_bp, algorithm = "elim", statistic = "ks")
+ks_elim_super_bp <- runTest(Super_go_bp, algorithm = "elim", statistic = "ks")
+
+# Enrichment tests for Cellular Component Kolmogrov-Smirnov-Elim
+ks_elim_cells_cc <- runTest(Cells_go_cc, algorithm = "elim", statistic = "ks")
+ks_elim_super_cc <- runTest(Super_go_cc, algorithm = "elim", statistic = "ks")
+```
+
+# tables
+
+```{r}
+# Molecular Function (MF)
+tab_cells_mf <- get_enrich_table(Cells_go_mf, 
+                                fisher_cells_mf, 
+                                ks_cells_mf, 
+                                ks_elim_cells_mf)
+
+tab_super_mf <- get_enrich_table(Super_go_mf, 
+                                fisher_super_mf, 
+                                ks_super_mf, 
+                                ks_elim_super_mf)
+
+# Biological Process (BP)
+tab_cells_bp <- get_enrich_table(Cells_go_bp, 
+                                fisher_cells_bp, 
+                                ks_cells_bp, 
+                                ks_elim_cells_bp)
+
+tab_super_bp <- get_enrich_table(Super_go_bp, 
+                                fisher_super_bp, 
+                                ks_super_bp, 
+                                ks_elim_super_bp)
+
+# Cellular Component (CC)
+tab_cells_cc <- get_enrich_table(Cells_go_cc, 
+                                fisher_cells_cc, 
+                                ks_cells_cc, 
+                                ks_elim_cells_cc)
+
+tab_super_cc <- get_enrich_table(Super_go_cc, 
+                                fisher_super_cc, 
+                                ks_super_cc, 
+                                ks_elim_super_cc)
 ```
 
 # Plotting
 
 ```{r}
-# running our functions for each comparson
-# cells
-enrichres_cells <- enrich_obj(results = enriched_cells_df, 
-                            gene_list = extracted_cells, 
-                            background_genes = annotation_data$query, 
-                            gene_sets_list = background_kegg)
+# MF plots
+go_MF_graph_cells <- plot_enrich_bar(tab_cells_mf, "MF Cells")
+go_MF_graph_super <- plot_enrich_bar(tab_super_mf, "MF Supernatant")
 
-class(enrichres_cells)
-# supernatant
-enrichres_super <- enrich_obj(results = enriched_super_df, 
-                            gene_list = extracted_super, 
-                            background_genes = annotation_data$query, 
-                            gene_sets_list = background_kegg)
+# BP plots
+go_bp_graph_cells <- plot_enrich_bar(tab_cells_bp, "BP Cells")
+go_bp_graph_super <- plot_enrich_bar(tab_super_bp, "BP Supernatant")
 
-class(enrichres_super)
+# CC plots
+go_CC_graph_cells <- plot_enrich_bar(tab_cells_cc, "CC Cells")
+go_CC_graph_super <- plot_enrich_bar(tab_super_cc, "CC Supernatant")
 
-# plot
-cells_dotplot <- dotplot(enrichres_cells) + ggtitle("Cells 24 vs. Cells 48")
-super_dotplot <- dotplot(enrichres_super) + ggtitle("Supernatant 24 vs. Supernatant 48")
+# saving graphs
+ggsave("DEG_results/go_MF_cells.png",
+       plot = go_MF_graph_cells, dpi = 600, width = 10, height = 8)
+ggsave("DEG_results/go_MF_super.png",
+       plot = go_MF_graph_super, dpi = 600, width = 10, height = 8)
 
-# saving plots
-ggsave("DEG_results/dotplot_cells.png",
-       plot = cells_dotplot, width = 8, height = 6, dpi = 300)
-ggsave("DEG_results/dotplot_super.png",
-       plot = super_dotplot, width = 8, height = 6, dpi = 300)
+ggsave("DEG_results/go_bp_cells.png",
+       plot = go_bp_graph_cells, dpi = 600, width = 10, height = 8)
+ggsave("DEG_results/go_bp_super.png",
+       plot = go_bp_graph_super, dpi = 600, width = 10, height = 8)
+
+ggsave("DEG_results/go_CC_cells.png",
+       plot = go_CC_graph_cells, dpi = 600, width = 10, height = 8)
+ggsave("DEG_results/go_CC_super.png",
+       plot = go_CC_graph_super, dpi = 600, width = 10, height = 8)
 
 # plot to markdown
-cells_dotplot
-super_dotplot
+go_MF_graph_cells
+go_MF_graph_super
+
+go_bp_graph_cells
+go_bp_graph_super
+
+go_CC_graph_cells
+go_CC_graph_super
+```
+
+# Cog stuff
+
+```{r}
+# pulling out all upregulated DEGs
+upreg_cells <- cells_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.5)
+
+upreg_super <- super_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.05)
+
+# same with downreg
+downreg_cells <- cells_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05)
+
+downreg_super <- super_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05)
+```
+
+# Adding cog terms
+
+```{r}
+upreg_cells <- merge(upreg_cells, annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+upreg_super <- merge(upreg_super, annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+downreg_cells <- merge(downreg_cells, annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+
+downreg_super <- merge(downreg_super, annotation_data[, c("query", "COG_category")], by.x = "gene_id", by.y = "query", all.x = TRUE)
+```
+
+# Filter out non matches
+
+```{r}
+upreg_cells <- upreg_cells %>%
+  filter(COG_category != "-")
+
+upreg_super <- upreg_super %>%
+  filter(COG_category != "-")
+
+downreg_cells <- downreg_cells %>%
+  filter(COG_category != "-")
+
+downreg_super <- downreg_super %>%
+  filter(COG_category != "-")
+```
+
+
+# bar plotting
+
+```{r}
+# creating our bar plots
+cog_bar_upcells <- ggplot(data = upreg_cells, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  geom_text(stat='count', aes(label=..count..), vjust=-0.3, size=3.5) +  # add count labels
+  scale_fill_viridis_d(option = "C") +
+  labs(
+    title = "Upregulated COG Categories: Cells 48H vs. 24H",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+cog_bar_upsuper <- ggplot(data = upreg_super, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  geom_text(stat='count', aes(label=..count..), vjust=-0.3, size=3.5) +  # add count labels
+  scale_fill_viridis_d(option = "C") +
+  labs(
+    title = "Upregulated COG Categories: Supernatant 48H vs. 24H",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+# creating our bar plots
+cog_bar_downcells <- ggplot(data = downreg_cells, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  geom_text(stat='count', aes(label=..count..), vjust=-0.3, size=3.5) +  # add count labels
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = "Downregulated COG Categories: Cells 48H vs. 24H",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+cog_bar_downsuper <- ggplot(data = downreg_super, aes(x = COG_category, fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  geom_text(stat='count', aes(label=..count..), vjust=-0.3, size=3.5) +  # add count labels
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = "Upregulated COG Categories: Supernatant 48H vs. 24H",
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+# save pngs
+
+# plot to markdown
+cog_bar_upcells
+cog_bar_upsuper
+cog_bar_downcells
+cog_bar_downsuper
+```
+
+
+# Export out top genes for everythinggg
+
+```{r}
+# top 20 genes
+C24_top20 <- DIAMOND_resC24_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.05) %>%
+  arrange(desc(log2FoldChange)) %>%
+  slice_head(n = 20)
+
+C48_top20 <- DIAMOND_resC48_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.05) %>%
+  arrange(desc(log2FoldChange)) %>%
+  slice_head(n = 20)
+
+N24_top20 <- DIAMOND_resN24_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.05) %>%
+  arrange(desc(log2FoldChange)) %>%
+  slice_head(n = 20)
+
+N48_top20 <- DIAMOND_resN48_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.05) %>%
+  arrange(desc(log2FoldChange)) %>%
+  slice_head(n = 20)
+
+cells_top20 <- DIAMOND_cells_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.05) %>%
+  arrange(desc(log2FoldChange)) %>%
+  slice_head(n = 20)
+
+super_top20 <- DIAMOND_super_df %>%
+  filter(log2FoldChange > 1.5, padj < 0.05) %>%
+  arrange(desc(log2FoldChange)) %>%
+  slice_head(n = 20)
+
+# bottom 20 genes
+C24_bott20 <- DIAMOND_resC24_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05) %>%
+  arrange(log2FoldChange) %>%
+  slice_head(n = 20)
+
+C48_bott20 <- DIAMOND_resC48_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05) %>%
+  arrange(log2FoldChange) %>%
+  slice_head(n = 20)
+
+N24_bott20 <- DIAMOND_resN24_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05) %>%
+  arrange(log2FoldChange) %>%
+  slice_head(n = 20)
+
+N48_bott20 <- DIAMOND_resN48_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05) %>%
+  arrange(log2FoldChange) %>%
+  slice_head(n = 20)
+
+cells_bott20 <- DIAMOND_cells_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05) %>%
+  arrange(log2FoldChange) %>%
+  slice_head(n = 20)
+
+super_bott20 <- DIAMOND_super_df %>%
+  filter(log2FoldChange < -1.5, padj < 0.05) %>%
+  arrange(log2FoldChange) %>%
+  slice_head(n = 20)
+```
+
+# Gonna try to make some nice tables
+
+This one has colors
+gt_C24 <- C24_top20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Upregulated Genes"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  ) %>%
+  data_color(
+    columns = log2FoldChange,
+    colors = scales::col_numeric(c("orange", "red"), domain = NULL)
+  )
+
+```{r}
+# top 20 tables
+gt_C24 <- C24_top20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Upregulated Genes: Cells 24H vs. Control"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+gt_C48 <- C48_top20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Upregulated Genes: Cells 48H vs. Control"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+gt_N24 <- N24_top20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Upregulated Genes: Supernatant 24H vs. Control"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+gt_N48 <- N48_top20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top Upregulated Genes: Supernatant 48H vs. Control"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+gt_cells <- cells_top20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Upregulated Genes: Cells 48H vs Cells 24H"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+gt_super <- super_top20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top Upregulated Genes: Supernatant 48H vs. Supernatant 24H"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+# save table
+#gtsave(gt_C24, "C24_table.png")
+gt_C24
+gt_C48
+gt_N24
+gt_N48
+gt_cells
+gt_super
+```
+# Downreg tables
+
+```{r}
+# downregulated genes
+gt_C24D <- C24_bott20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Downregulated Genes: Cells 24H vs. Control"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+gt_C48D <- C48_bott20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Downregulated Genes: Cells 48H vs. Control"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+gt_N24D <- N24_bott20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Downregulated Genes: Supernatant 24H vs. Control"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+gt_N48D <- N48_bott20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Downregulated Genes: Supernatant 48H vs. Control"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+gt_cellsD <- cells_bott20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Downregulated Genes: Cells 48H vs Cells 24H"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+gt_superD <- super_bott20 %>%
+  select(gene_id, log2FoldChange, padj, stitle) %>%
+  gt() %>%
+  tab_header(
+    title = "Top 20 Downregulated Genes: Supernatant 48H vs. Supernatant 24H"
+  ) %>%
+  cols_label(
+    gene_id = "Gene",
+    log2FoldChange = "Log2 Fold Change",
+    padj = "Adjusted P-Value",
+    stitle = "DIAMOND Hit"
+  )
+
+# plot to markdown
+gt_C24D
+gt_C48D
+gt_N24D
+gt_N48D
+gt_cellsD
+gt_superD
+```
+
+# Save the tables
+
+```{r, echo=FALSE,message=FALSE}
+gtsave(gt_C24, "DEG_results/upregC24.png")
+gtsave(gt_C48, "DEG_results/upregC48.png")
+gtsave(gt_N24, "DEG_results/upregSuper24.png")
+gtsave(gt_N48, "DEG_results/upregSuper48.png")
+
+gtsave(gt_C24D, "DEG_results/downregC24.png")
+gtsave(gt_C48D, "DEG_results/downregC48.png")
+gtsave(gt_N24D, "DEG_results/downregN24.png")
+gtsave(gt_N48D, "DEG_results/downregN48.png")
+
+gtsave(gt_cells, "DEG_results/upregCells.png")
+gtsave(gt_super, "DEG_results/upregsuper.png")
+
+gtsave(gt_cellsD, "DEG_results/downregcells.png")
+gtsave(gt_superD, "DEG_results/downregsuper.png")
 ```
 
