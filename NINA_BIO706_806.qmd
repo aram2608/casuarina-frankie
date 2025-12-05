@@ -26,6 +26,8 @@ editor: visual
 ---
 
 ```{r, include=TRUE}
+# THE LINK IS HERE https://github.com/aram2608/casuarina-frankie
+
 # We need to create some global configurations 
 # to set up our working environment
 # Here we set the mirror for downloading packages if needed
