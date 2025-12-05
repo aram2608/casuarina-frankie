@@ -1,0 +1,1106 @@
+---
+title: "Global Gene Expression in the Initial Stages of the Actinorhizal Symbiosis"
+author: "Javier Arambula Rascon"
+date: today
+bibliography: references.bib
+format:
+  pdf:
+    pdf-engine: xelatex
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    lof: true
+    lot: true
+    geometry: ["margin=1in"]
+    fig-cap-location: bottom
+    tbl-cap-location: top
+execute:
+  echo: false
+  warning: false
+  message: false
+  error: false
+  freeze: auto
+code-fold: show
+code-line-numbers: false
+editor: visual
+---
+
+```{r, include=TRUE}
+# We need to create some global configurations 
+# to set up our working environment
+# Here we set the mirror for downloading packages if needed
+options(
+  repos = c(CRAN = "https://cran.rstudio.com/"),
+  width = 100
+)
+
+# Knitr defaults for code chunks
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  fig.width = 6,
+  fig.height = 4,
+  dpi = 300,
+  dev = "pdf",
+  out.width = "90%"
+)
+
+# We create an output directory to save results
+dir.create("results", showWarnings = FALSE)
+```
+
+```{r, eval=FALSE}
+# We create a character vector to store our packages
+pkgs <- c(
+"ggplot2", "tidyr",
+"ggrepel", "ggVennDiagram", "dplyr", "progress",
+"patchwork", "pheatmap", "RColorBrewer", "knitr", "forcats", "BiocManager"
+)
+# setdiff() function compares two vectors
+# - and returns the elements that are in the first vector but not the second
+# We use it to find the names of the packages that are not yet installed
+# We can then install them using the install.packages() function
+install.packages(setdiff(pkgs, rownames(installed.packages())))
+
+# We need to use BiocManager for these packages instead
+bio_pckgs <- c(
+  "DESeq2", "topGO"
+)
+
+# We install any required packages
+BiocManager::install(setdiff(bio_pckgs, rownames(installed.packages())))
+```
+
+```{r}
+# Load libraries
+library(DESeq2)
+library(ggplot2)
+library(topGO)
+library(tidyr)
+library(ggrepel)
+library(ggVennDiagram)
+library(dplyr)
+library(progress)
+library(patchwork)
+library(pheatmap)
+library(RColorBrewer)
+library(knitr)
+library(forcats)
+```
+
+```{r}
+# We read in the file as a tsv
+featurecounts_raw <- read.delim("feature_counts.txt",
+                                sep = "\t",
+                                header = TRUE)
+
+# Column clean up step
+cleanfeatures <- featurecounts_raw[-c(2, 3, 4, 5, 6)]
+
+# Removes the first column
+counts <- cleanfeatures[, -1]
+
+# We need to set rownames for our count matrix
+rownames(counts) <- cleanfeatures[, 1]
+
+# We now import our column metadata
+coldata <- read.csv("coldata.csv", header = TRUE)
+
+# We set row names for coldata
+rownames(coldata) <- coldata$Sample
+
+# We now test to see if rownames and columnnames match for meta data and counts matrix
+# all(rownames(coldata) == colnames(counts))
+```
+
+```{r}
+# We can then create our design formula
+# design <- formula(~ Treatment + Time + Treatment:Time)
+# Error: Model Matrix Not Full rank 
+# The columns are linear combinations of each other so we are not 
+# able to create a linear model formula give our dataframe structure
+
+# We create a DeseqDataSet or DDS
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = coldata,
+                              design = ~ Treatment)
+
+# We set our control as reference
+dds$Treatment <- relevel(dds$Treatment, ref = "control")
+# Prints our deseq object to consoole, useful for checking strucuture
+# dds
+
+# We can now perform DEG
+dds <- DESeq(dds, quiet = TRUE)
+
+# We now need to create a results object
+results <- results(dds)
+```
+
+```{r}
+# We perform sanity testing to ensure our code worked
+# We print results to the console
+# results
+
+# We do the same for the summary of our results
+# summary(results)
+
+# This prints pairwise comparisons, another useful double check
+# resultsNames(dds)
+```
+
+```{r}
+# We perform VST transformation
+vsd <- vst(dds, blind = TRUE)
+pca_data <- plotPCA(vsd, intgroup = c("Treatment"), returnData = TRUE)
+percent_var <- round(100 * attr(pca_data, "percentVar"))
+
+# PCA plotting using ggplot2
+pca <- ggplot(pca_data, aes(PC1, PC2, color = Treatment)) +
+  geom_point(size = 3, alpha = 0.8) +
+  xlab(paste0("PC1: ", percent_var[1], "% variance")) +
+  ylab(paste0("PC2: ", percent_var[2], "% variance")) +
+  coord_fixed() +
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(color = "black"),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank()
+  )
+
+# Saves our plot to result directory
+# 300 is good for print resolution roughly
+ggsave("results/pca_plot.png", plot = pca, width = 6, height = 6, dpi = 300)
+```
+
+```{r}
+# We perform a small cleanup of the resultNames and store into a variable comparisons
+comparisons <- resultsNames(dds)[-1]
+
+# We initialize a list to store results
+all_degs <- list()
+
+# We loop through each pair-wise comparison
+for (comp in comparisons) {
+  
+  # We store results for each comparison
+  res <- results(dds, name = comp)
+  
+  # We can now filter for adjusted p-values and drop NA rows
+  sig <- res[which(res$padj < 0.05 & !is.na(res$padj)), ]
+
+  # We use the abs() method to find absolute-
+  # values to capture both up and down regulated genes
+  all <- rownames(sig[abs(sig$log2FoldChange) > 1.5, ])
+
+  # We now store our comparison to our list
+  all_degs[[comp]] <- all
+}
+
+# We can now create a ggVennDiagram of our extracted DEGs
+all_venn <- ggVennDiagram(all_degs, label_alpha = 0, edge_size = 0.5,
+                          label = "count",
+                          #label_size = 5,  # cells vs control 24H
+                          category.names = c("Cells 24H",
+                                             # cells vs control 48h
+                                             "Cells 48H",
+                                             # supernatant vs control 24h
+                                             "Supernatant 24H",
+                                             # supernatant vs control 48
+                                             "Supernatant 48H")) +
+  theme(text = element_text(size = 5, face = "bold")) +
+  scale_fill_distiller(palette = "Spectral") +
+  labs(title = "") +
+  theme(text = element_text(size = 10),
+        plot.title = element_text(size = 14, hjust = 0.5, face = "bold"))
+
+# We need to apply a small fix to our labels since they are too long
+fixed_venn <- all_venn + scale_x_continuous(expand = expansion(mult = 0.2))
+
+# Save our plot to results
+ggsave("results/all_DEGs_venn.png",
+       plot = fixed_venn, dpi = 300, width = 10, height = 8)
+```
+
+```{r}
+# We need to store comparison names
+cell_24_control <- resultsNames(dds)[-c(1,3,4,5)]
+cell_48_control <- resultsNames(dds)[-c(1,2,4,5)]
+nina_24_control <- resultsNames(dds)[-c(1,2,3,5)]
+nina_48_control <- resultsNames(dds)[-c(1,2,3,4)]
+
+# We store results for each comparison
+resC24 <- results(dds, name = cell_24_control)
+resC48 <- results(dds, name = cell_48_control) 
+resN24 <- results(dds, name = nina_24_control)
+resN48 <- results(dds, name = nina_48_control)
+
+# We make a small helper func to help filter and label
+# our df
+filter_diffexpress <- function(resframe, lfc = 1.5, padj_cut = 0.05) {
+   df <- as.data.frame(resframe) %>%
+    filter(!is.na(log2FoldChange), !is.na(padj)) %>%
+    mutate(
+      diffexpress = case_when(
+        padj < padj_cut & log2FoldChange >  lfc  ~ "UP",
+        padj < padj_cut & log2FoldChange < -lfc  ~ "DOWN",
+        TRUE                                      ~ "NO"
+      )
+    )
+   return(df)
+}
+
+# We now filter the data for NA values
+resC24_df <- filter_diffexpress(resC24)
+resC48_df <- filter_diffexpress(resC48)
+resN24_df <- filter_diffexpress(resN24)
+resN48_df <- filter_diffexpress(resN48)
+
+# Now we need to convert row names to columns
+resC24_df$gene_id <- rownames(resC24_df)
+resC48_df$gene_id <- rownames(resC48_df)
+resN24_df$gene_id <- rownames(resN24_df)
+resN48_df$gene_id <- rownames(resN48_df)
+```
+
+```{r}
+# Helper function for volcano plots
+volc_plotter <- function(result_frame, title) {
+  volc_plot <- ggplot(data = result_frame, 
+                        aes(x = log2FoldChange,
+                            # We log transform the adjusted p values
+                            # for easier interpretation
+                            y = -log10(padj), 
+                            color = diffexpress)) +
+  geom_vline(xintercept = c(-1.5, 1.5), col = "gray", linetype = "dashed") +
+  geom_hline(yintercept = -log10(0.05), col = "gray", linetype = "dashed") +
+  geom_point(size = 1.5) +
+  scale_color_manual(values = c("blue","grey","red"),
+                     labels = c("Downregulated", 
+                                "Not significant", 
+                                "Upregulated")) +
+  # Cartesian coordinates maximize readability while allowing us control over
+  # the size of the plotting area
+  coord_cartesian(ylim = c(0, 40), xlim = c(-10, 10)) +
+  labs(color = "Legend", 
+       x = expression("log"[2]*"FC"), 
+       y = expression("-log"[10]*"p-value")) +
+  ggtitle(title) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    legend.position = "none"
+    #legend.text = element_text(size = 6)
+  )
+  return(volc_plot)
+}
+
+# We can now apply the function to the results dfs
+volc_cells_24 <- volc_plotter(resC24_df, "")
+volc_cells_48 <- volc_plotter(resC48_df, "")
+volc_NINA_24 <- volc_plotter(resN24_df, "")
+volc_NINA_48 <- volc_plotter(resN48_df, "")
+```
+
+```{r}
+#| fig-cap: ["Volcano Plot: Cells", "Volcano Plot: Supernatant"]
+# We use the pathwork syntax to stitch our plots together into a combined plot
+comb_volc_cells <- volc_cells_24 + volc_cells_48 +
+  plot_annotation(
+    tag_levels = "A"
+  ) +
+  plot_layout(
+    guides = "collect"
+  )
+
+comb_volc_supernatant <- volc_NINA_24 + volc_NINA_48 +
+  plot_annotation(
+    tag_levels = "A"
+  ) +
+  plot_layout(
+    guides = "collect"
+  )
+
+# We can save the result
+ggsave("results/volc_cells.png",
+       plot = comb_volc_cells, dpi = 300, width = 10, height = 8)
+
+ggsave("results/volc_supernatant.png",
+       plot = comb_volc_supernatant, dpi = 300, width = 10, height = 8)
+```
+
+```{r}
+# Load in our data
+annotation_data <- read.delim("dups_removed_viridae.tsv", 
+                              sep = "\t", 
+                              header = TRUE, 
+                              check.names = FALSE)
+```
+
+```{r}
+# We select the columns with GO terms
+go_terms <- annotation_data[c(1,10)]
+
+# We filter out any non-annotated genes
+go_terms <- go_terms %>%
+  filter(GOs != "-")
+
+# We export out our go terms to a tsv file
+write.table(go_terms, 
+            file = "go_terms.tsv", 
+            sep = "\t", 
+            quote = FALSE, 
+            row.names = FALSE)
+
+# Here we are loading back in our file with the readMappings function
+gene2goMappings <- readMappings(file = "go_terms.tsv", 
+                                sep = "\t", 
+                                IDsep = ",")
+```
+
+```{r}
+# We create a helper function to process our dataframes
+merge_and_dropNas <- function(res_frame, annotations, lfc_cut = 1.5) {
+  # We store a df object
+  df <- res_frame %>%
+    # We join our annotated data frame, we select the query and GOs column
+    # from our annotations
+    left_join(annotations %>% select(query, GOs),
+              join_by(gene_id == query)) %>%
+    # We then drop any NAs to prevent watering down of our analysis
+    drop_na(GOs) %>%
+    # We then need to filter by our preset log fold change cutoff
+    filter(abs(log2FoldChange) > lfc_cut) %>%
+    # We can then select the gene_id and padj column for our final
+    # frame
+    select(gene_id, padj)
+  return(df)
+}
+
+Cp24 <- merge_and_dropNas(resC24_df, go_terms)
+Cp48 <- merge_and_dropNas(resC48_df, go_terms)
+Np24 <- merge_and_dropNas(resN24_df, go_terms)
+Np48 <- merge_and_dropNas(resN48_df, go_terms)
+
+# We need to sort by p-value for topgo to work properly
+sorted_Cp24 <- Cp24[order(Cp24$padj),]
+sorted_Cp48 <- Cp48[order(Cp48$padj),]
+sorted_Np24 <- Np24[order(Np24$padj),]
+sorted_Np48 <- Np48[order(Np48$padj),]
+
+# We now need to convert to topGOs genelist format
+topgo_Cp24 <- sorted_Cp24$padj
+topgo_Cp48 <- sorted_Cp48$padj
+topgo_Np24 <- sorted_Np24$padj
+topgo_Np48 <- sorted_Np48$padj
+
+# Now we can provide topgo vector with a name
+names(topgo_Cp24) <- sorted_Cp24$gene_id
+names(topgo_Cp48) <- sorted_Cp48$gene_id
+names(topgo_Np24) <- sorted_Np24$gene_id
+names(topgo_Np48) <- sorted_Np48$gene_id
+
+# This is a hard coded p-value cutoff for our filtering function
+# topGO requires this function or else the enrichment will not work
+padj_cut <- 0.05
+
+# functions for filtering significant genes
+topgo_filter_func <- function(x) {
+  return(x <= padj_cut)
+}
+```
+
+```{r}
+# First I am going to create a helper func to minimize boiler plate
+go_bp <- function(topgo_object) {
+  bp <- new("topGOdata", 
+               ontology = "BP", 
+               allGenes = topgo_object, 
+               annot = annFUN.gene2GO, 
+               geneSel = topgo_filter_func,
+               gene2GO = gene2goMappings)
+  return(bp)
+}
+```
+
+```{r}
+# Cells vs control 24
+Cp24_go_bp <- go_bp(topgo_Cp24)
+
+# NINA vs control 24
+Np24_go_bp <- go_bp(topgo_Np24)
+
+# Cells vs control 48
+Cp48_go_bp <- go_bp(topgo_Cp48)
+
+# NINA vs control 48
+Np48_go_bp <- go_bp(topgo_Np48)
+```
+
+```{r}
+# Helper function that wraps the runTest function for ease of use
+elim_fisher <- function(go_object) {
+  fishy <- runTest(go_object, 
+                   algorithm = "weight01", 
+                   statistic = "fisher")
+  return(fishy)
+}
+
+# Enrichment tests for biological process
+fisher_Cp24_bp <- elim_fisher(Cp24_go_bp)
+fisher_Cp48_bp <- elim_fisher(Cp48_go_bp)
+fisher_Np24_bp <- elim_fisher(Np24_go_bp)
+fisher_Np48_bp <- elim_fisher(Np48_go_bp)
+```
+
+```{r}
+# Helper function to generate a nicely formatted enrichment table
+get_enrich_table <- function(go_obj, fisher_result, total_genes = NULL) {
+  tab <- GenTable(go_obj,
+                  classicFisher = fisher_result,
+                  # orders results by sig p-values
+                  orderBy = "classicFisher",
+                  ranksOf = "classicFisher",
+                  # topNodes = length(score(fisher_result)))
+                  topNodes = 10) %>%
+    mutate(
+      pvalue = as.numeric(classicFisher),
+      Term = factor(Term, levels = rev(unique(Term))),
+      Count = as.numeric(Significant),
+      #GeneRatio = if (!is.null(total_genes)) Count / total_genes else NA_real_
+    ) %>%
+    select(Term, Count, pvalue, everything()) %>%
+    arrange(pvalue)
+  return(tab)
+}
+```
+
+```{r}
+# Biological Process (BP)
+tab_Cp24_bp <- get_enrich_table(Cp24_go_bp, 
+                                fisher_Cp24_bp)
+
+tab_Cp48_bp <- get_enrich_table(Cp48_go_bp, 
+                                fisher_Cp48_bp)
+
+tab_Np24_bp <- get_enrich_table(Np24_go_bp, 
+                                fisher_Np24_bp)
+
+tab_Np48_bp <- get_enrich_table(Np48_go_bp, 
+                                fisher_Np48_bp)
+```
+
+```{r}
+plot_enrich_bar <- function(enrich_tab, title = "") {
+  enrich_tab <- enrich_tab %>%
+    # We filter by p-value
+    filter(pvalue < 0.05) %>%
+    # We arrange bars by p-value
+    arrange(pvalue) %>%
+    # We create new columns for plotting
+    mutate(
+      # We transform the Term column into a factor, and set levels by unique values
+      Term = factor(Term, levels = rev(unique(Term))),
+      # We transform the Count column into a number
+      Count = as.numeric(Count),
+      # We transform our pvalue column into a number
+      pvalue = as.numeric(pvalue)
+    )
+
+  # Plotting method
+  ggplot(enrich_tab, aes(x = Count, y = Term, fill = pvalue)) +
+    geom_bar(stat = "identity") +
+    scale_fill_gradient(low = "red", high = "blue", name = "p-value") +
+    labs(
+      title = title,
+      x = "Gene Count",
+      y = NULL
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold"),
+      axis.text.y = element_text(size = 10),
+      axis.title.x = element_text(size = 12),
+      legend.title = element_text(size = 10),
+      legend.text = element_text(size = 9)
+    )
+}
+```
+
+```{r}
+
+# BP plots -> these are the most informtive terms so we can ignore the rest
+go_bp_graph_C24 <- plot_enrich_bar(tab_Cp24_bp)
+go_bp_graph_C48 <- plot_enrich_bar(tab_Cp48_bp)
+go_bp_graph_N24 <- plot_enrich_bar(tab_Np24_bp)
+go_bp_graph_N48 <- plot_enrich_bar(tab_Np48_bp)
+
+# We save the graphs to the results directory
+ggsave("results/go_bp_C24.png",
+       plot = go_bp_graph_C24, dpi = 600, width = 10, height = 8)
+ggsave("results/go_bp_C48.png",
+       plot = go_bp_graph_C48, dpi = 600, width = 10, height = 8)
+ggsave("results/go_bp_N24.png",
+       plot = go_bp_graph_N24, dpi = 600, width = 10, height = 8)
+ggsave("results/go_bp_N48.png",
+       plot = go_bp_graph_N48, dpi = 600, width = 10, height = 8)
+```
+
+```{r}
+# Helper function to extract DEG COGS
+cog_filter <- function(resdf, logfold) {
+  if (logfold > 0) {
+  resdf <- resdf %>%
+    filter(log2FoldChange > logfold, padj < 0.05)
+  } else if (logfold < 0) {
+    resdf <- resdf %>%
+    filter(log2FoldChange < logfold, padj < 0.05)
+  } else {
+    stop("LogFold can not be zero")
+  }
+  return(resdf)
+}
+
+# Upregulated (log2FC > +1.5)
+upreg_C24 <- cog_filter(resC24_df,  1.5)
+upreg_C48 <- cog_filter(resC48_df,  1.5)
+upreg_N24 <- cog_filter(resN24_df,  1.5)
+upreg_N48 <- cog_filter(resN48_df,  1.5)
+
+# Downregulated (log2FC < -1.5)
+downreg_C24 <- cog_filter(resC24_df, -1.5)
+downreg_C48 <- cog_filter(resC48_df, -1.5)
+downreg_N24 <- cog_filter(resN24_df, -1.5)
+downreg_N48 <- cog_filter(resN48_df, -1.5)
+```
+
+```{r}
+# Helper function to prevent a lot of boiler plate
+add_cogs <- function(res, annotations) {
+  df <- res %>%
+    # We merge the annotation data
+    # We selection the query and COG_category columns from the annotation
+    # data exclusively
+    left_join(annotations %>% select(query, COG_category),
+              join_by(gene_id == query)) %>%
+    # We the filter by all non matches
+    filter(COG_category != "-") %>%
+    mutate(COG_category, as.factor(COG_category))
+  return(df)
+}
+```
+
+```{r}
+# We apply our helper function to add COG terms
+upreg_C24 <- add_cogs(upreg_C24, annotation_data)
+
+upreg_C48 <- add_cogs(upreg_C48, annotation_data)
+
+upreg_N24 <- add_cogs(upreg_N24, annotation_data)
+
+upreg_N48 <- add_cogs(upreg_N48, annotation_data)
+
+downreg_C24 <- add_cogs(downreg_C24, annotation_data)
+
+downreg_C48 <- add_cogs(downreg_C48, annotation_data)
+
+downreg_N24 <- add_cogs(downreg_N24, annotation_data)
+
+downreg_N48 <- add_cogs(downreg_N48, annotation_data)
+```
+
+```{r}
+# Helper functions to create our bar charts
+plot_cogs <- function(cog_frame, title) {
+  cog_plot <- ggplot(data = cog_frame, 
+                     aes(x = fct_infreq(COG_category), 
+                         fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  scale_fill_viridis_d(option = "C") +
+  labs(
+    title = title,
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+  return(cog_plot)
+}
+```
+
+```{r}
+# creating our bar plots
+cog_bar_c24 <- plot_cogs(upreg_C24, 
+                         title = "Upregulated COGs: Cells vs. Control 24H")
+
+cog_bar_c48 <- plot_cogs(upreg_C48, 
+                         title = "Upregulated COGs: Cells vs. Control 48H")
+
+cog_bar_n24 <- plot_cogs(upreg_N24, 
+                         title = "Upregulated COGs: Supernatant vs. Control 24H")
+
+cog_bar_n48 <- plot_cogs(upreg_N48, 
+                         title = "Upregulated COGs: Supernatant vs. Control 48H")
+```
+
+```{r}
+# Helper for downregulated cogs
+plot_down_cogs <- function(cog_frame, title) {
+  cog_plot <- ggplot(data = cog_frame, 
+                     aes(x = fct_infreq(COG_category), 
+                         fill = COG_category)) + 
+  geom_bar(show.legend = FALSE) +  # remove legend for cleaner look
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = title,
+    x = "COG Category",
+    y = "Category Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    axis.text.y = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+  return(cog_plot)
+}
+```
+
+```{r}
+# We can now create our bar plots
+cog_bar_c24D <- plot_down_cogs(downreg_C24, 
+                               title = "Downregulated COGs: Cells vs. Control 24")
+
+cog_bar_c48D <- plot_down_cogs(downreg_C48, 
+                               title = "Downregulated COGs: Cells vs. Control 48")
+
+cog_bar_n24D <- plot_down_cogs(downreg_N24, 
+                               title = "Downregulated COGs: Supernatant vs. Control 24")
+
+cog_bar_n48D <- plot_down_cogs(downreg_N48, 
+                               title = "Downregulated COGs: Supernatant vs. Control 48")
+```
+
+```{r}
+# We load in our annotation file
+diamond_hits <- read.delim("filtered.tsv", sep = "\t", header = TRUE)
+
+# We need to trim white space off the columns
+diamond_hits$qseqid <- trimws(diamond_hits$qseqid)
+diamond_hits$sseqid <- trimws(diamond_hits$sseqid)
+diamond_hits$stitle <- trimws(diamond_hits$stitle)
+
+# This is a helper function to add annotations to results dataframe
+add_diamond_annotations <- function(res_df, diamond_df) {
+  merge(res_df, 
+        diamond_df[, c("qseqid", "sseqid", "stitle")],
+        by.x = "gene_id",
+        by.y = "qseqid", 
+        all.x = TRUE)
+}
+
+# We can now run our function for each data frame
+DIAMOND_resC24_df <- add_diamond_annotations(resC24_df, diamond_hits)
+DIAMOND_resC48_df <- add_diamond_annotations(resC48_df, diamond_hits)
+DIAMOND_resN24_df <- add_diamond_annotations(resN24_df, diamond_hits)
+DIAMOND_resN48_df <- add_diamond_annotations(resN48_df, diamond_hits)
+
+# A helper function for adding a new column for labels
+# I changed this to top10 rather than top 50
+add_delabel_top50 <- function(df) {
+  
+  # We choose which genes to annotate by Log2FoldChange and p-values
+  sig_genes <- df %>%
+    filter(abs(log2FoldChange) > 1.5, padj < 0.05)
+  
+  # We create an object of top genes
+  top50 <- sig_genes %>%
+    arrange(padj) %>%
+    slice_head(n = 10)
+  
+  # We can now apply our label
+  df$delabel <- ifelse(df$sseqid %in% top50$sseqid, df$sseqid, NA)
+  
+  # Return the labeled data frame
+  return(df)
+}
+
+# We apply the function to each data frame
+DIAMOND_resC24_df <- add_delabel_top50(DIAMOND_resC24_df)
+DIAMOND_resC48_df <- add_delabel_top50(DIAMOND_resC48_df)
+DIAMOND_resN24_df <- add_delabel_top50(DIAMOND_resN24_df)
+DIAMOND_resN48_df <- add_delabel_top50(DIAMOND_resN48_df)
+```
+
+```{r}
+# Helper function to minimize boilerplate
+# Takes a dataframe and an integer value as paramters
+# Returns a dataframe
+table_filter <- function(annotated_df, logfold) {
+  # Logical operation to handle positive fold changes
+  if (logfold > 0) {
+    df <- annotated_df %>%
+      filter(log2FoldChange > logfold, padj < 0.05) %>%
+      # We arrange by most positive
+      arrange(desc(log2FoldChange)) %>%
+      slice_head(n = 20)
+    # Logical operation to catch negative fold changes
+  } else if (logfold < 0) {
+    df <- annotated_df %>%
+      filter(log2FoldChange < logfold, padj < 0.05) %>%
+      # We arrange by most negative first
+      arrange(log2FoldChange) %>%
+      slice_head(n = 20)
+    # Catch all in case 0 is accidentally plugged in
+  } else {
+    stop("logfold cannot be zero.")
+  }
+  return(df)
+}
+```
+
+```{r}
+# Top 20 genes
+C24_top20 <- table_filter(DIAMOND_resC24_df, 1.5)
+
+C48_top20 <- table_filter(DIAMOND_resC48_df, 1.5)
+
+N24_top20 <- table_filter(DIAMOND_resN24_df, 1.5)
+
+N48_top20 <- table_filter(DIAMOND_resN48_df, 1.5)
+
+# Bottom 20 genes
+C24_bott20 <- table_filter(DIAMOND_resC24_df, -1.5)
+
+C48_bott20 <- table_filter(DIAMOND_resC48_df, -1.5)
+
+N24_bott20 <- table_filter(DIAMOND_resN24_df, -1.5)
+
+N48_bott20 <- table_filter(DIAMOND_resN48_df, -1.5)
+```
+
+```{r}
+# Helper function for table plotting
+table_maker <- function(table_frame, title, knitr_label) {
+  df <- table_frame %>%
+    select(gene_id, log2FoldChange, stitle) %>%
+    rename(
+      GeneID = gene_id,
+      `Log2 Fold Change`= log2FoldChange,
+      `DIAMOND Hit` = stitle
+    )
+  kable(
+    df,
+    caption  = title,
+    label = knitr_label,
+    booktabs = is_latex_output(),
+  )
+}
+```
+
+```{r}
+# Top 20 tables
+gt_C24 <- table_maker(C24_top20,
+                      knitr_label = "tbl-gtC24",
+                      title = "Top 20 Upregulated Genes: Cells 24H vs. Control")
+
+gt_C48 <- table_maker(C48_top20, 
+                      knitr_label = "tbl-gtC48",
+                      title = "Top 20 Upregulated Genes: Cells 48H vs. Control")
+
+gt_N24 <- table_maker(N24_top20, 
+                      knitr_label = "tbl-gtN24",
+                      title = "Top 20 Upregulated Genes: Supernatant 24H vs. Control")
+
+gt_N48 <- table_maker(N48_top20, 
+                      knitr_label = "tbl-gtN48",
+                      title = "Top Upregulated Genes: Supernatant 48H vs. Control")
+
+# downregulated genes
+gt_C24D <- table_maker(C24_bott20, 
+                       knitr_label = "tbl-gtC24D",
+                       title = "Top 20 Downregulated Genes: Cells 24H vs. Control")
+
+gt_C48D <- table_maker(C48_bott20, 
+                       knitr_label = "tbl-gtC48D",
+                       title = "Top 20 Downregulated Genes: Cells 48H vs. Control")
+
+gt_N24D <- table_maker(N24_bott20, 
+                       knitr_label = "tbl-gtN24D",
+                       title = "Top 20 Downregulated Genes: Supernatant 24H vs. Control")
+
+gt_N48D <- table_maker(N48_bott20, 
+                       knitr_label = "tbl-gtN48D",
+                       title = "Top 20 Downregulated Genes: Supernatant 48H vs. Control")
+```
+
+```{r}
+# We first transform our results object into an R dataframe
+results <- as.data.frame(results)
+
+# We capture the top genes by p-value into a new object
+top_pval <- results %>%
+  # We drop NA values
+  filter(!is.na(padj)) %>%
+  # We keep only the significant genes
+  filter(padj <= 0.05) %>%
+  # We slice off the the 200 most signifcant genes for our plot
+  slice_min(padj, n = 200, with_ties = FALSE)
+
+# We now transform the top_pval object into a list of rownames
+top_pval <- rownames(top_pval)
+
+# We create a normalized_counts object from our dds object
+normalize_counts <- counts(dds, normalized=TRUE)
+
+# We create a helper function to calculate z scores
+calc_z <- function(x) {
+  # We take our x value and subtract it by the mean, we then divide by
+  # the standard deviation to get our final z - score
+  (x-mean(x)) / sd(x)
+}
+
+# We can now calculate z-scores for our normalized counts
+# We pass in the normalize_counts object with a MARGIN of 1
+# This ensures that the function is applied over rows for a matrix
+z_scored <- t(apply(normalize_counts, MARGIN = 1, FUN = calc_z))
+
+# We now need to subset our z_score frame by our top hits
+m <- z_scored[top_pval,]
+
+# Since the dataframe has some ugly labels we need to do a bit of text manipulation
+# to make a prettier heap map
+short_labels <- colnames(m) %>%
+  # We pattern match the beginning and replace with an empty string
+  sub("^.*trimmed_", "", .) %>%
+  # We then match the suffix and replace with an empty string
+  sub("_R1_001\\.fastq\\.gz_sorted\\.bam$", "", .)
+
+# We now add the labels to our matrix
+colnames(m) <- short_labels
+
+# To create our annotations for the Condtion we grep the name
+# and replace with a prettier/short label
+cond <- case_when(
+  grepl("(^|_)0R",     short_labels) ~ "Control",
+  grepl("(^|_)24BR",   short_labels) ~ "Frankia 24H",
+  grepl("(^|_)48BR",   short_labels) ~ "Frankia 48H",
+  grepl("(^|_)24SNR",  short_labels) ~ "Supernatant 24H",
+  grepl("(^|_)48SNR",  short_labels) ~ "Supernatant 48H",
+  TRUE                                ~ "Unlabeled"
+)
+
+# We can now create an annotation column
+annotation_col <- data.frame(Condition = cond, row.names = colnames(m))
+
+# Custom palette
+my_palette <- colorRampPalette(rev(brewer.pal(11, "RdBu")))(255)
+
+# Annotation colors
+ann_colors <- list(
+  Condition = brewer.pal(5, "Set1") %>% setNames(
+    c("Control","Frankia 24H","Frankia 48H","Supernatant 24H","Supernatant 48H")
+  )
+)
+
+# We also create short labels 
+pretty_labels <- c("C1","C2","C3",
+                   "F24 1","F24 2","F24 3",
+                   "S24 1","S24 2","S24 3",
+                   "F48 1","F48 2","F48 3",
+                   "S48 1","S48 2","S48 3")
+```
+
+# Introduction
+
+Actinorhizal plants are members of the nitrogen fixing clade, belonging to a rich consortia of plants, spanning eight families with roughly 250 separate species [@normand_family_2014]. These plants are notoriously resilient, capable of thriving in harsh and nutrient deplete soils, [@wall_actinorhizal_2000], and oftentimes play important roles in ecological succession [@ardley_evolution_2021]. Given this resilience and their nitrogen fixing capabilities, a broad interest in these plants has developed at the global scale for various ventures including land reclamation, firewood production, and dune stabilization to name a few [@diagne_use_2013; @schwencke_advances_2001; @zhong_casuarina_2013].
+
+The emblematic characteristic of the actinorhizal symbiosis is the root nodule formed between the plant host and its bacterial symbiont, *Frankia*. The formation of this structure is a highly choreographed and tightly controlled process, involving a rhizospheric dialogue utilizing, as of yet, unknown signaling molecules, proceeded by root infection typically lasting 2 weeks [@franche_signalling_2012]. The identity of the plant-derived molecule responsible for initiation has long been speculated as being a form of flavonoid compound, mirroring the legume-rhizobia symbiosis [@abdel-lateif_silencing_2013; @abdel-lateif2012]. Many other similarities are shared as well, as the backbone of both symbioses is embodied in the common symbiotic pathway, an ancient pathway believed to have originated more than 450 million years ago to accommodate the arbuscular myccorhizal symbioses [@vernié2025]. These similarities have been manifested as broad scale homology across components of the pathway [@hocher_transcriptomics_2011], as well as experimental evidence finding upregulation of several key genes is exhibited during nodule formation for both plant groups [@chabaud_chitinase-resistant_2016; @clavijo_casuarina_2015; @gherbi_symrk_2008; @svistoonoff_independent_2013]. However, a dichotomy between the two pathways has been found, as the bacterial counterparts have been shown to possibly emit differing signaling compounds.
+
+By now, it is well known that NOD factor secretion is crucial to the establishment of nodules in leguminous plants [@tao2024; @truchet1991]. The formation of these compounds can be broadly attributed to three primary genes, *nod* ABC, as well as various accessory genes typically associated with host specificity [@lerouge1990]. Interestingly enough, these genes have been shown to be missing from a large majority of *Frankia* genomes, with a body of evidence instead suggesting the *Frankia* derived molecule demonstrates proteinaceous characteristics [@chabaud_chitinase-resistant_2016; @clavijo_casuarina_2015]. This dichotomy thus begins to beg the question, how have these two starkly different bacterial species leveraged the shared symbiotic machinery across these associations?
+
+Here, we attempt to being answering this question by investigating the acthinorhizal symbiosis through a transcriptomic lens. *Casuarina glauca* was treated with both *Frankia* cells and cell free supernatant for 24 and 48 hours respectively, proceeded with mRNA sequencing for differential gene expression analysis against an unreated control. It was found that plants treated with *Frankia* for 24 hours experienced marked changes in expression when compared to the other pairwise comparisons, with a majority of the genes seeing pronounced up-regulation. Many of these genes were found to be related to defense-response pathways, however, a notable nodulin gene *cg12,* as well as several kinase/kinase-like receptor genes were found to be the most impacted.
+
+# Methods
+
+## Bioinformatic Pipeline
+
+The mRNA was first checked for quality using FastQC [@babraham]. The reads were then trimmed using Trimmomatic, with the following parameters applied: LEADING:3, TRAILING:3, SLIDINGWINDOW:4:15, and MINLEN:36 [@bolger_trimmomatic_2014]. Trimmed reads were then QC checked again, prior to alignment to the recently published *Casuarina glauca* genome on NCBI, accession GCA_028551395.1. This was accomplished using the HISAT2 alignment tool and subsequent processing of SAM files with samtools [@kim_graph-based_2019; @li_sequence_2009].
+
+As of now, given the recent status of the genome, there is no available GTF annotation file for *Casuarina glauca,* so a custom gene annotation was created using the mapped alignments as evidence using the BRAKER2 pipeline using GeneMark and AUGUSTUS [@bruna_braker2_2021; @lomsadze_integration_2014; @stanke_augustus_2006]. The quality of the produced annotation was checked using BUSCO, the annotations were compared across three lineages, *Embryophyta*, *Eudicots*, and *Fagales* [@manni_busco_2021]. Extraction of FASTA files for BUSCO checking was conducted using gffread [@pertea_gff_2020].
+
+Once the quality was assessed, read counts were analyzed using the featurecounts read assignment tool [@liao_featurecounts_2014]. Raw reads were then used for differential gene expression using DESeq2 for the pairwise comparisons against the non-treated control and time-scale comparisons [@anders_differential_2010]. Normalization of read counts is conducted by DESeq2 using the median of ratios method [@anders_differential_2010].
+
+Functional annotation for the differentially expressed genes was performed using eggnog-mapper, followed by over-representation analysis of Gene Ontology terms using topGO [@alexa_improved_2006; @cantalapiedra_eggnog-mapper_2021]. Enriched GO terms were calculated using a weighted Fisher’s Exact test. Plotting of COG category distributions for each pairwise comparison were then conducted to deduce the categorical makeup of differentially expressed genes. Functional annotations and gene descriptions were retrieved from the NCBI non-redundant database using DIAMOND [@buchfink_sensitive_2021]. For quality assurance, the variance-stabilizing transformation (VST) method, implemented by DESeq2, was applied to the raw reads for PCA plotting to infer sample similarity and clustering patterns.
+
+# Results
+
+## Quality Assurance for RNA-Seq Data
+
+The principle component analysis shows tight clustering between the separate treatment types. This demonstrates strong sample similarity, with a high degree of variance explained by both component 1 and 2, at 54% and 20% respectively @fig-pca. Through this understanding, we can move forward with our subsequent analyses with assurance that we are able to answer our biological questions.
+
+```{r}
+#| label: fig-pca
+#| fig-cap: Principle Component Analysis
+plot(pca)
+```
+
+## Global Expression Patterns
+
+In general, the cell treatments elicited the strongest response in *Casuarina glauca*, with exposure for 24 hours experiencing the most substantial change. In total, there were 684 and 277 differentially expressed genes for cell treatments at 24 and 48 hours respectively (\>1.5 log-fold change and \< 0.05 adjusted p-value). Conversely, there were only 167 and 166 differentially expressed gene for supernatant treatment at 24 and 48 hours respectively (\>1.5 log-fold change and \< 0.05 adjusted p-value). It can be noted that there is a broad degree of overlap between differentially expressed genes across treatment types shown in @fig-venn.
+
+```{r}
+#| label: fig-venn
+#| fig-cap: "Venn Diagram of Pair-wise Comparisons. Counts are shown for genes with < 0.05 adjusted p-value and >1.5 absolute log-fold change."
+plot(fixed_venn)
+```
+
+Furthermore, in regards to cell treatment, we were able to find that overwhelmingly, a majority of the differentially expressed genes were up-regulated at 24 hours as seen in @fig-volc-cell A. This was followed by a subsequent increase in the number of down-regulated genes at 48 hours @fig-volc-cell B.
+
+```{r}
+#| label: fig-volc-cell
+#| fig-cap: "Volcano plots for differentially expressed genes. A. Cell treatment for 24 hours. B. Cell treatment for 48 hours. The x-axis displays the log2 transformed fold change and the y-axis displays the log10 transformed adjusted p-values."
+plot(comb_volc_cells)
+```
+
+The supernatant treatments experienced a similar pattern, with a broad degree of up-regulation at 24 hours (@fig-volc-super A) followed by down-regulation at 48 hours (@fig-volc-super B). While similar, it should be noted that the up-regulation at 24 hours was not nearly as pronounced as seen in the cell treatments.
+
+```{r}
+#| label: fig-volc-super
+#| fig-cap: "Volcano plots for differentially expressed genes. A. Supernatant treatment for 24 hours. B. Supernatant treatment for 48 hours. The x-axis displays the log2 transformed fold change and the y-axis displays the log10 transformed adjusted p-values."
+plot(comb_volc_supernatant)
+```
+
+To further investigate the underlying patterns of the differentially expressed genes, the Z-scores were calculated for the normalized counts where a heat-map was created for the top 200 genes by significance (\< 0.05 adjusted p-value). @fig-heatmap shows an interesting pattern, where the 24 hour treatment with *Frankia* cells demonstrated overall up-regulation as opposed to the general trend of down-regulation for the three separate treatments. Overwhelmingly, the largest clustering of genes for 48 hour treatment with cells and both supernatant treatments shows general down-regulation.
+
+```{r}
+#| label: fig-heatmap
+#| fig-cap: "Heat Map for the 200 Most Significant Genes (< 0.05 adjusted p-value). Upregulated genes are denoted in red with downregulated genes being shown in blue. Overall clustering patterns demonstrate a general trend in downregulation for three treatments groups with cell treatment for 24 hours demonstrating a buck in the trend with overall upregulation."
+# We can now create our heatmap
+pheatmap(
+  # Our matrix object
+  m,
+  annotation_col = annotation_col,
+  color = my_palette,
+  labels_col = pretty_labels,
+  # We remove rownames to make it more readable
+  show_rownames = FALSE,
+  annotation_colors = ann_colors,
+  # We scaled manually
+  scale = "none"
+)
+```
+
+## Over Representation Analysis
+
+GO term enrichment was performed for the differentially expressed genes for each pair-wise comparison using a weighted Fisher's exact test. Terms were collected from the egg-nog mapper annotations, where a custom gene-universe was created for analysis given the lack of a designated database/annotation set for *Casuarina glauca*. Terms for biological process were plotted given a p-value threshold of \< 0.05. For cell treatment for 24 hours, genes typically associated with defense response were the most impacted with notable terms being GO:0010200 (response to chitin), GO:0042742 (defense response to bacterium), GO:0009620 (response to fungus), and GO:0046244 (salicylic acid catabolic process). Other general stress response pathways were noted as well such as GO:0001101 (response to acid chemical), GO:0006749 (glutathione metabolic process), GO:0071456 (cellular response to hypoxia), and GO:0006995 (cellular response to nitrogen starvation). Finally, several other miscellaneous terms were found to be over represented GO:0006518 (peptide metabolic process) and GO:0042447 (hormone catabolic process) as shown in @fig-go-cells24.
+
+```{r}
+#| label: fig-go-cells24
+#| fig-cap: "Top 10 enriched GO Terms for cell treatment for 24 hours. The x-axis dsiplays the total gene count per category and y-axis displays the upregulated process. Genes are plotted by p-value < 0.05."
+
+plot(go_bp_graph_C24)
+```
+
+Similarly, cell treatment for 48 hours saw a general change in defense response pathways as well. Notable terms include GO:0080141 (regulation of jasmonic acid biosynthetic process) and GO:0080142 (regulation of the salicylic acid biosynthetic process). Other processes of note included separate hormone responses such as GO:0009739 (response to gibberellin) and GO:0046885 (regulation of hormone biosynthetic process). Several other general terms were found to be impacted such as GO:0009664 (plant-type cell wall organization), GO:0048316 (seed development), GO:0001101 (response to acid chemical), GO:0032989 (cellular anatomical entity morphogenesis), and GO:0010193 (response to ozone) @fig-go-cells48.
+
+```{r}
+#| label: fig-go-cells48
+#| fig-cap: "Top 10 enriched GO Terms for cell treatment for 48 hours. The x-axis dsiplays the total gene count per category and y-axis displays the upregulated process. Genes are plotted by p-value < 0.05."
+
+plot(go_bp_graph_C48)
+```
+
+Interestingly enough, supernatant treatment for 24 hours demonstrated a similar response in defense related pathways. Notable differentially regulated terms include GO:0098542 (defense response to other organism), GO:0042742 (defense response to bacterium), and GO:0002229 (defense response to bacterium). Likewise, terms related to varying plant hormones were impacted, such as GO:0042447 (hormone catabolic process), GO:0046244 (salicylic acid catabolic process), GO:0009725 (response to hormone), and GO:0009751 (response to salicylic acid). Other general terms were also found to be impacted including GO:0017001 (antibiotic catabolic process), GO:0046677 (response to antibiotic), and GO:0010150 (leaf senescence) @fig-go-super24.
+
+```{r}
+#| label: fig-go-super24
+#| fig-cap: "Top 10 enriched GO Terms for supernatant treatment for 24 hours. The x-axis dsiplays the total gene count per category and y-axis displays the upregulated process. Genes are plotted by p-value < 0.05."
+
+plot(go_bp_graph_N24)
+```
+
+Supernatant treatment for 48 hours followed similar patterns. Defense and hormone related terms remained largely over represented GO:0009867 (jasmonic acid mediated signaling pathway), GO:0080141 (regulation of jasmonic acid biosynthetic process), GO:0080142 (regulation of salicylic acid biosynthetic process), and GO:0046885 (regulation of hormone biosynthetic process). Likewise, several stress response terms were noted, GO:0010193 (response to ozone), and GO:0098869 (cellular oxidant detoxification). Finally, a handful of other miscellaneous terms GO:0048766 (root hair initiation), GO:0048522 (positive regulation of cellular process), and GO:0009664 (plant-type cell wall organization) @fig-go-super48.
+
+```{r}
+#| label: fig-go-super48
+#| fig-cap: "Top 10 enriched GO Terms for supernatant treatment for 48 hours. The x-axis dsiplays the total gene count per category and y-axis displays the upregulated process. Genes are plotted by p-value < 0.05."
+
+plot(go_bp_graph_N48)
+```
+
+```{r}
+# #| fig-cap: ["Upregulated COG Terms Cells 24H", "Upregulated COG Terms Cells 48H", "Upregulated COG Terms Supernatant 24H", "Upregulated COG Terms Supernatant 24H"] #  # plot(cog_bar_c24) # plot(cog_bar_c48) # plot(cog_bar_n24) # plot(cog_bar_n48)
+```
+
+```{r}
+# #| fig-cap: ["Downregulated COG Terms Cells 24H", "Downregulated COG Terms Cells 48H", "Downregulated COG Terms Supernatant 24H", "Downregulated COG Terms Supernatant 24H"]
+# 
+# plot(cog_bar_c24D)
+# plot(cog_bar_c48D)
+# plot(cog_bar_n24D)
+# plot(cog_bar_n48D)
+```
+
+# Discussion
+
+Root nodule formation is an intricate process that requires fine-tuning of gene expression over an extended period of time. Extensive experimentation has been conducted on the legume-rhizobia symbiosis, and in this study, we aimed to expand the understanding of the actinorhizal counterpart of the nitrogen-fixing clade. Through transciptomic investigation, we have been able to demonstrate marked differences between treatment with *Frankia* cells and cell-free supernatant, particularly in the magnitude of gene expression change and the associated pathways.
+
+Understandably, the response to *Frankia* cells themselves was the most pronounced, with the highest number of differentially expressed genes following 24 hours of exposure and a steady drop in these expression changes at 48 hours. These findings corroborate previous studies, where it has been found that early gene response in root-nodule formation is largely ephemeral [@kouchi2004]. A majority of these transiently expressed genes appear to be related to stress and defense. Likewise, this finding is in agreement with the literature, where it has been described that these defense related genes may be a natural response to bacteria, where recognition through a signaling molecule leads to a shunting of the plant immune system, enabling infection [@mergaert2020; @kouchi2004; @lohar2006].
+
+Interestingly enough, supernatant treatment saw similar patterns, where there was a short burst in gene expression changes at 24 hours, followed by a large decrease at 48 hours. This likely follows a similar rationale as cell treatment, where bacterial peptides/compounds trigger the plant immune response followed by subsequent inhibition to facilitate infection. A major point of contention thus arises from one key observation, why does treatment with cells for 48 hours and supernatant for both 24 and 48 hours cause such drastic down-regulation when similar pathways appear to be affected? The clustering patterns in @fig-heatmap demonstrate an overwhelming amount of down-regulation for the 200 most significant genes by p-value, yet the primarily affected pathways across the board are defense and stress adjacent which can lead to several conclusions; 1.) exposure to *Frankia* cells may cause a contact dependent defense response through surface structures/proteins and 2.) compounds in the supernatant illicit a separate defense response from surface structures/proteins.
+
+Tables 1-8 help to demonstrate the most impacted functions, where the top 20 upregulated (or top 13 for supernatant treatment for 48 hours) show subtle similarities and differences. For example, treatment with cells for 24 hours was the only pairwise comparison to show marked changes in a known nodulin gene, *cg12*. This gene encodes for a subtilisin-like serine protease, speculated to have a possible roles in a number of distinct processes; 1.) weakening of the cell wall during infection, 2.) loosening of the infection thread capsule, 3.) or play a role in peptide signaling as a processing subtilase [@svistoonoff_cg12_2003]. Similarly to the literature, we were unable to show significant *cg12* expression in any other treatment group, marking *cg12* as a distinct gene during initial exposure to *Frankia* cells. Other genes of note for cell and supernatant and supernatant treatments for 24 hours are the numerous receptor-like proteins of varying kinds, likely playing a role in defense response and environmental sensing [@goff2007].
+
+The findings from this study help to expand the available pool of information regarding the actinorhizal symbiosis. As technology has advanced and the cost of sequencing has decreased, the ability to perform high-throughout experiments has allowed for broad scale discovery of new genes and isoforms across a plethora of species. As the data sets available for *Casuarina glauca* become more substantial, future experimentation can have a higher degree of confidence of finally cracking the code to why rhizobia and *Frankia* differe in infection strategies and how this difference is reflected on the plant hosts.
+
+# Appendix
+
+```{r}
+gt_C24
+```
+
+```{r}
+gt_C24D
+```
+
+```{r}
+gt_C48
+```
+
+```{r}
+gt_C48D
+```
+
+```{r}
+gt_N24
+```
+
+```{r}
+gt_N24D
+```
+
+```{r}
+gt_N48
+```
+
+```{r}
+gt_N48D
+```
+
+# References
