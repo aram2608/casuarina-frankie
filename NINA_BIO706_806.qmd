@@ -381,35 +381,30 @@ merge_and_dropNas <- function(res_frame, annotations, lfc_cut = 1.5) {
     # We then drop any NAs to prevent watering down of our analysis
     drop_na(GOs) %>%
     # We then need to filter by our preset log fold change cutoff
-    filter(abs(log2FoldChange) > lfc_cut) %>%
+    filter(abs(log2FoldChange) >= lfc_cut) %>%
     # We can then select the gene_id and padj column for our final
     # frame
     select(gene_id, padj)
   return(df)
 }
 
-Cp24 <- merge_and_dropNas(resC24_df, go_terms)
-Cp48 <- merge_and_dropNas(resC48_df, go_terms)
-Np24 <- merge_and_dropNas(resN24_df, go_terms)
-Np48 <- merge_and_dropNas(resN48_df, go_terms)
-
-# We need to sort by p-value for topgo to work properly
-sorted_Cp24 <- Cp24[order(Cp24$padj),]
-sorted_Cp48 <- Cp48[order(Cp48$padj),]
-sorted_Np24 <- Np24[order(Np24$padj),]
-sorted_Np48 <- Np48[order(Np48$padj),]
+# Wrapper functions to create our topgo objects
+create_topgo_object <- function(res_df, go_terms_df = go_terms) {
+  res_df <- merge_and_dropNas(res_df, go_terms_df)
+  # We need sort the object by p-value for topgo to work properly
+  temp_sorted <- res_df[order(res_df$padj),]
+  # We now need to convert to topGOs genelist format
+  temp_top_go <- temp_sorted$padj
+  # We now need to convert to topGOs genelist format
+  names(temp_top_go) <- temp_sorted$gene_id
+  return(temp_top_go)
+}
 
 # We now need to convert to topGOs genelist format
-topgo_Cp24 <- sorted_Cp24$padj
-topgo_Cp48 <- sorted_Cp48$padj
-topgo_Np24 <- sorted_Np24$padj
-topgo_Np48 <- sorted_Np48$padj
-
-# Now we can provide topgo vector with a name
-names(topgo_Cp24) <- sorted_Cp24$gene_id
-names(topgo_Cp48) <- sorted_Cp48$gene_id
-names(topgo_Np24) <- sorted_Np24$gene_id
-names(topgo_Np48) <- sorted_Np48$gene_id
+topgo_Cp24 <- create_topgo_object(resC24_df)
+topgo_Cp48 <- create_topgo_object(resC48_df)
+topgo_Np24 <- create_topgo_object(resN24_df)
+topgo_Np48 <- create_topgo_object(resN48_df)
 
 # This is a hard coded p-value cutoff for our filtering function
 # topGO requires this function or else the enrichment will not work
@@ -419,6 +414,46 @@ padj_cut <- 0.05
 topgo_filter_func <- function(x) {
   return(x <= padj_cut)
 }
+```
+
+```{r}
+temp_filter <- function(res_df, logfold) {
+  if (logfold > 0) {
+    res_df <- res_df %>%
+      filter(log2FoldChange >= logfold)
+  } else if (logfold < 0) {
+    res_df <- res_df %>%
+      filter(log2FoldChange <= logfold)
+  } else {
+    stop("LogFold can not be zero")
+  }
+} 
+
+# filter step
+up_Cp24 <- temp_filter(resC24_df, 1.5)
+down_Cp24 <- temp_filter(resC24_df, -1.5)
+
+up_Cp48 <- temp_filter(resC48_df, 1.5)
+down_Cp48 <- temp_filter(resC48_df, -1.5)
+
+up_Np24 <- temp_filter(resN24_df, 1.5)
+down_Np24 <- temp_filter(resN24_df, -1.5)
+
+up_Np48 <- temp_filter(resN48_df, 1.5)
+down_Np48 <- temp_filter(resN48_df, -1.5)
+
+# Merge go terms and drop na values
+topgo_up_Cp24 <- create_topgo_object(up_Cp24, go_terms)
+topgo_down_Cp24 <- create_topgo_object(down_Cp24, go_terms)
+
+topgo_up_Cp48 <- create_topgo_object(up_Cp48, go_terms)
+topgo_down_Cp48 <- create_topgo_object(down_Cp48, go_terms)
+
+topgo_up_Np24 <- create_topgo_object(up_Np24, go_terms)
+topgo_down_Np24 <- create_topgo_object(down_Np24, go_terms)
+
+topgo_up_Np48 <- create_topgo_object(up_Np48, go_terms)
+topgo_down_Np48 <- create_topgo_object(down_Np48, go_terms)
 ```
 
 ```{r}
@@ -432,24 +467,7 @@ go_bp <- function(topgo_object) {
                gene2GO = gene2goMappings)
   return(bp)
 }
-```
 
-```{r}
-# Cells vs control 24
-Cp24_go_bp <- go_bp(topgo_Cp24)
-
-# NINA vs control 24
-Np24_go_bp <- go_bp(topgo_Np24)
-
-# Cells vs control 48
-Cp48_go_bp <- go_bp(topgo_Cp48)
-
-# NINA vs control 48
-Np48_go_bp <- go_bp(topgo_Np48)
-```
-
-```{r}
-# Helper function that wraps the runTest function for ease of use
 elim_fisher <- function(go_object) {
   fishy <- runTest(go_object, 
                    algorithm = "weight01", 
@@ -457,14 +475,6 @@ elim_fisher <- function(go_object) {
   return(fishy)
 }
 
-# Enrichment tests for biological process
-fisher_Cp24_bp <- elim_fisher(Cp24_go_bp)
-fisher_Cp48_bp <- elim_fisher(Cp48_go_bp)
-fisher_Np24_bp <- elim_fisher(Np24_go_bp)
-fisher_Np48_bp <- elim_fisher(Np48_go_bp)
-```
-
-```{r}
 # Helper function to generate a nicely formatted enrichment table
 get_enrich_table <- function(go_obj, fisher_result, total_genes = NULL) {
   tab <- GenTable(go_obj,
@@ -476,6 +486,7 @@ get_enrich_table <- function(go_obj, fisher_result, total_genes = NULL) {
                   topNodes = 10) %>%
     mutate(
       pvalue = as.numeric(classicFisher),
+      # We create a factor and remove dups then reverse for the order
       Term = factor(Term, levels = rev(unique(Term))),
       Count = as.numeric(Significant),
       #GeneRatio = if (!is.null(total_genes)) Count / total_genes else NA_real_
@@ -484,21 +495,49 @@ get_enrich_table <- function(go_obj, fisher_result, total_genes = NULL) {
     arrange(pvalue)
   return(tab)
 }
+
+# Wrapper function to eliminate boiler plate as much as possible
+enrich_topgo_to_table <- function(topgo_object) {
+  topgo_result <- go_bp(topgo_object)
+  fisher_result <- elim_fisher(topgo_result)
+  results_table <- get_enrich_table(topgo_result, fisher_result)
+  return(results_table)
+}
+```
+
+```{r}
+up_Cp24_go_bp <- go_bp(topgo_up_Cp24)
+down_Cp24_go_bp <- go_bp(topgo_down_Cp24)
+
+up_Cp48_go_bp <- go_bp(topgo_up_Cp48)
+down_Cp48_go_bp <- go_bp(topgo_down_Cp48)
+
+up_Np24_go_bp <- go_bp(topgo_up_Np24)
+down_Np24_go_bp <- go_bp(topgo_down_Np24)
+
+up_Np48_go_bp <- go_bp(topgo_up_Np48)
+down_Np48_go_bp <- go_bp(topgo_down_Np48)
 ```
 
 ```{r}
 # Biological Process (BP)
-tab_Cp24_bp <- get_enrich_table(Cp24_go_bp, 
-                                fisher_Cp24_bp)
+tab_Cp24_bp <- enrich_topgo_to_table(topgo_Cp24)
 
-tab_Cp48_bp <- get_enrich_table(Cp48_go_bp, 
-                                fisher_Cp48_bp)
+tab_Cp48_bp <- enrich_topgo_to_table(topgo_Cp48)
 
-tab_Np24_bp <- get_enrich_table(Np24_go_bp, 
-                                fisher_Np24_bp)
+tab_Np24_bp <- enrich_topgo_to_table(topgo_Np24)
 
-tab_Np48_bp <- get_enrich_table(Np48_go_bp, 
-                                fisher_Np48_bp)
+tab_Np48_bp <- enrich_topgo_to_table(topgo_Np48)
+
+tab_up_Cp24_bp <- enrich_topgo_to_table(topgo_up_Cp24)
+tab_up_Cp48_bp <- enrich_topgo_to_table(topgo_up_Cp48)
+tab_up_N24_bp <- enrich_topgo_to_table(topgo_up_Np24)
+tab_up_N48_bp <- enrich_topgo_to_table(topgo_up_Np48)
+
+tab_down_Cp24_bp <- enrich_topgo_to_table(topgo_down_Cp24)
+tab_down_Cp48_bp <- enrich_topgo_to_table(topgo_down_Cp48)
+tab_down_N24_bp <- enrich_topgo_to_table(topgo_down_Np24)
+tab_down_N48_bp <- enrich_topgo_to_table(topgo_down_Np48)
 ```
 
 ```{r}
@@ -546,6 +585,18 @@ go_bp_graph_C48 <- plot_enrich_bar(tab_Cp48_bp)
 go_bp_graph_N24 <- plot_enrich_bar(tab_Np24_bp)
 go_bp_graph_N48 <- plot_enrich_bar(tab_Np48_bp)
 
+go_bp_up_graph_C24 <- plot_enrich_bar(tab_up_Cp24_bp)
+go_bp_down_graph_C24 <- plot_enrich_bar(tab_down_Cp24_bp)
+
+go_bp_up_graph_C48 <- plot_enrich_bar(tab_up_Cp48_bp)
+go_bp_down_graph_C48 <- plot_enrich_bar(tab_down_Cp48_bp)
+
+go_bp_up_graph_N24 <- plot_enrich_bar(tab_up_N24_bp)
+go_bp_down_graph_N24 <- plot_enrich_bar(tab_down_N24_bp)
+
+go_bp_up_graph_N48 <- plot_enrich_bar(tab_up_N48_bp)
+go_bp_down_graph_N48 <- plot_enrich_bar(tab_down_N48_bp)
+
 # We save the graphs to the results directory
 ggsave("results/go_bp_C24.png",
        plot = go_bp_graph_C24, dpi = 600, width = 10, height = 8)
@@ -562,10 +613,10 @@ ggsave("results/go_bp_N48.png",
 cog_filter <- function(resdf, logfold) {
   if (logfold > 0) {
   resdf <- resdf %>%
-    filter(log2FoldChange > logfold, padj < 0.05)
+    filter(log2FoldChange >= logfold, padj <= 0.05)
   } else if (logfold < 0) {
     resdf <- resdf %>%
-    filter(log2FoldChange < logfold, padj < 0.05)
+    filter(log2FoldChange <= logfold, padj <= 0.05)
   } else {
     stop("LogFold can not be zero")
   }
@@ -728,7 +779,7 @@ add_delabel_top50 <- function(df) {
   
   # We choose which genes to annotate by Log2FoldChange and p-values
   sig_genes <- df %>%
-    filter(abs(log2FoldChange) > 1.5, padj < 0.05)
+    filter(abs(log2FoldChange) >= 1.5, padj <= 0.05)
   
   # We create an object of top genes
   top50 <- sig_genes %>%
@@ -757,14 +808,14 @@ table_filter <- function(annotated_df, logfold) {
   # Logical operation to handle positive fold changes
   if (logfold > 0) {
     df <- annotated_df %>%
-      filter(log2FoldChange > logfold, padj < 0.05) %>%
+      filter(log2FoldChange >= logfold, padj <= 0.05) %>%
       # We arrange by most positive
       arrange(desc(log2FoldChange)) %>%
       slice_head(n = 20)
     # Logical operation to catch negative fold changes
   } else if (logfold < 0) {
     df <- annotated_df %>%
-      filter(log2FoldChange < logfold, padj < 0.05) %>%
+      filter(log2FoldChange <= logfold, padj <= 0.05) %>%
       # We arrange by most negative first
       arrange(log2FoldChange) %>%
       slice_head(n = 20)
@@ -849,6 +900,14 @@ gt_N24D <- table_maker(N24_bott20,
 gt_N48D <- table_maker(N48_bott20, 
                        knitr_label = "tbl-gtN48D",
                        title = "Top 20 Downregulated Genes: Supernatant 48H vs. Control")
+```
+
+```{r}
+write.table(tab_Cp24_bp, file = "enriched_Cp24_go_terms.tsv")
+write.table(tab_Cp48_bp, file = "enriched_Cp48_go_terms.tsv")
+write.table(tab_Np24_bp, file = "enriched_Np24_go_terms.tsv")
+write.table(tab_Np48_bp, file = "enriched_Np48_go_terms.tsv")
+# go_terms_of_interest
 ```
 
 ```{r}
