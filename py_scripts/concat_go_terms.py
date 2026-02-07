@@ -5,11 +5,14 @@ import sys
 from argparse import ArgumentParser, ArgumentTypeError
 
 
-def get_files(directory: Path, suffix: str) -> List[Path]:
+def get_files(directory: Path, suffix: str, glob: str) -> List[Path]:
     print("Searching for files...\n")
     data_dir = Path(directory)
-    glob_pattern = "*" + suffix
-    enriched_files = list(data_dir.glob(glob_pattern))
+    if glob:
+        glob_file_pattern = glob + "*" + suffix
+    else:
+        glob_file_pattern = "*." + suffix
+    enriched_files = list(data_dir.glob(glob_file_pattern))
     print(f"Retrieved {len(enriched_files)} files from {directory}")
     return enriched_files
 
@@ -28,13 +31,14 @@ def process_files(enriched_files: List[Path], id: str) -> List[str]:
             go_terms.append(i)
     return go_terms
 
-def main(directory: Path, id: str, suffix: str, output: str):
+
+def main(directory: Path, glob: str, id: str, suffix: str, output: str):
     ok_suffix: List[str] = ["csv", "tsv"]
     if suffix not in ok_suffix:
         print(f"Unexpected file type: {suffix}")
         return
 
-    enriched_files: List[Path] = get_files(directory, suffix)
+    enriched_files: List[Path] = get_files(directory, suffix, glob)
     go_terms: List[str] = process_files(enriched_files, id)
 
     go_terms: List[str] = list(set(go_terms))
@@ -63,6 +67,15 @@ if __name__ == "__main__":
         help="Path to directory.",
     )
     parser.add_argument(
+        "-g",
+        "--glob",
+        dest="glob",
+        type=str,
+        required=False,
+        default="",
+        help="Glob pattern for matching files.",
+    )
+    parser.add_argument(
         "-ID",
         dest="ID",
         required=True,
@@ -82,4 +95,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(args.path, args.ID, args.file_type, args.output)
+    main(args.path, args.glob, args.ID, args.file_type, args.output)

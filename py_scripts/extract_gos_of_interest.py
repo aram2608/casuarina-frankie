@@ -45,13 +45,17 @@ out = json.dumps(counts, indent=4)
 with open("go_counts.json", "w") as file:
     file.write(out)
 
+
 def validate_file(filepath: str):
     path: Path = Path(filepath)
     if not path.exists():
         raise ArgumentTypeError(f"File {filepath} does not exist")
     return path
 
+
 if __name__ == "__main__":
-    parser:ArgumentParser = ArgumentParser(description="Extracts go terms of interest from a tsv.")
-    parser.add_argument()
+    parser: ArgumentParser = ArgumentParser(
+        description="Extracts go terms of interest from a tsv."
+    )
+    # parser.add_argument()
     # TODO: Create a cli interface to take files
