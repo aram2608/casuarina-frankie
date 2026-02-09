@@ -22,7 +22,8 @@ for gene in query["query"]:
         if go in go_series:
             matched_term.append(go)
     it += 1
-    terms[gene] = matched_term
+    if len(matched_term) >= 1:
+        terms[gene] = matched_term
 
 out = json.dumps(terms, indent=4)
 

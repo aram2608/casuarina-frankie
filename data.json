@@ -1,0 +1,541 @@
+{
+    "GO:0009725": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0009725",
+        "label": "response to hormone",
+        "definition": "Any process that results in a change in state or activity of a cell or an organism (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of a hormone stimulus.",
+        "synonyms": [
+            "response to hormone stimulus"
+        ],
+        "relatedSynonyms": [
+            "growth regulator"
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0001101": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0001101",
+        "label": "response to acid chemical",
+        "definition": "Any process that results in a change in state or activity of a cell or an organism (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of a stimulus by the chemical structure of the anion portion of a dissociated acid (rather than the acid acting as a proton donor). The acid chemical may be in gaseous, liquid or solid form.",
+        "comment": "This term should be used to describe a response to a specific acid as a chemical. E.g., if an organism were responding to glutamate, then the response would be glutamate-specific; the organism is actually responding to the chemical structure of the anion portion of the dissociated acid. Note that this term is in the subset of terms that should not be used for direct gene product annotation. Instead, select a child term or, if no appropriate child term exists, please request a new term. Direct annotations to this term may be amended during annotation QC. If annotating experiments where an acid is playing a role as a proton donor, please annotate to GO:0010447 'response to acidic pH' instead.",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            "response to acid anion@",
+            "@response to oxoanion"
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            "http://purl.obolibrary.org/obo/go#gocheck_do_not_annotate"
+        ]
+    },
+    "GO:0098542": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0098542",
+        "label": "defense response to other organism",
+        "definition": "Reactions triggered in response to the presence of another organism that act to protect the cell or organism from damage caused by that organism.",
+        "creation_date": "2013-11-11T12:59:11Z",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            "GO:0009814"
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            "http://purl.obolibrary.org/obo/go#goslim_generic@",
+            "@http://purl.obolibrary.org/obo/go#goslim_prokaryote"
+        ]
+    },
+    "GO:0032989": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0032989",
+        "label": "cellular anatomical entity morphogenesis",
+        "definition": "The process in which a cellular entity is generated and organized. A cellular entity has granularity above the level of a protein complex but below that of an anatomical system.",
+        "synonyms": [
+            "cellular component morphogenesis@",
+            "@cellular structure morphogenesis"
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            "http://purl.obolibrary.org/obo/go#goslim_pir"
+        ]
+    },
+    "GO:0048522": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0048522",
+        "label": "positive regulation of cellular process",
+        "definition": "Any process that activates or increases the frequency, rate or extent of a cellular process, any of those that are carried out at the cellular level, but are not necessarily restricted to a single cell. For example, cell communication occurs among more than one cell, but occurs at the cellular level.",
+        "synonyms": [
+            "positive regulation of cellular physiological process@",
+            "@up regulation of cellular process@",
+            "@up-regulation of cellular process@",
+            "@upregulation of cellular process"
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            "GO:0051242"
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            "http://purl.obolibrary.org/obo/go#gocheck_do_not_annotate"
+        ]
+    },
+    "GO:0042742": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0042742",
+        "label": "defense response to bacterium",
+        "definition": "Reactions triggered in response to the presence of a bacterium that act to protect the cell or organism.",
+        "synonyms": [
+            "defence response to bacteria@",
+            "@defence response to bacterium@",
+            "@defense response to bacteria"
+        ],
+        "relatedSynonyms": [
+            "antibacterial peptide activity"
+        ],
+        "alternativeIds": [
+            "GO:0009816@",
+            "@GO:0042830"
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0009867": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0009867",
+        "label": "jasmonic acid mediated signaling pathway",
+        "definition": "The series of molecular signals mediated by jasmonic acid.",
+        "synonyms": [
+            "JA signaling@",
+            "@jasmonic acid mediated signalling pathway"
+        ],
+        "relatedSynonyms": [
+            "jasmonate signaling"
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0009620": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0009620",
+        "label": "response to fungus",
+        "definition": "Any process that results in a change in state or activity of a cell or an organism (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of a stimulus from a fungus.",
+        "synonyms": [
+            "response to fungi"
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            "GO:0009621"
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0046677": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0046677",
+        "label": "response to antibiotic",
+        "definition": "Any process that results in a change in state or activity of a cell or an organism (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of an antibiotic stimulus. An antibiotic is a chemical substance produced by a microorganism which has the capacity to inhibit the growth of or to kill other microorganisms.",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            "antibiotic susceptibility/resistance"
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            "Reactome:R-HSA-9639775"
+        ],
+        "subsets": [
+            "http://purl.obolibrary.org/obo/go#goslim_chembl"
+        ]
+    },
+    "GO:0009751": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0009751",
+        "label": "response to salicylic acid",
+        "definition": "Any process that results in a change in state or activity of a cell or an organism (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of a salicylic acid stimulus.",
+        "synonyms": [
+            "response to salicylate@",
+            "@response to salicylic acid stimulus"
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0010200": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0010200",
+        "label": "response to chitin",
+        "definition": "A process that results in a change in state or activity of a cell or an organism (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of a chitin stimulus.",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0009664": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0009664",
+        "label": "plant-type cell wall organization",
+        "definition": "A process that results in the assembly and arrangement of constituent parts of the cellulose and pectin-containing cell wall, or in the disassembly of the cellulose and pectin-containing cell wall. This process is carried out at the cellular level. An example of this process is found in Arabidopsis thaliana.",
+        "synonyms": [
+            "plant-type cell wall organisation"
+        ],
+        "relatedSynonyms": [
+            "cellulose and pectin-containing cell wall organization and biogenesis@",
+            "@plant-type cell wall organization and biogenesis"
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0045944": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0045944",
+        "label": "positive regulation of transcription by RNA polymerase II",
+        "definition": "Any process that activates or increases the frequency, rate or extent of transcription from an RNA polymerase II promoter.",
+        "synonyms": [
+            "activation of transcription from RNA polymerase II promoter@",
+            "@positive regulation of transcription from Pol II promoter@",
+            "@positive regulation of transcription from RNA polymerase II promoter@",
+            "@stimulation of transcription from RNA polymerase II promoter@",
+            "@up regulation of transcription from RNA polymerase II promoter@",
+            "@up-regulation of transcription from RNA polymerase II promoter@",
+            "@upregulation of transcription from RNA polymerase II promoter"
+        ],
+        "relatedSynonyms": [
+            "positive regulation of global transcription from Pol II promoter@",
+            "@positive regulation of transcription from RNA polymerase II promoter, global@",
+            "@up regulation of global transcription from RNA polymerase II promoter@",
+            "@up-regulation of global transcription from RNA polymerase II promoter@",
+            "@upregulation of global transcription from RNA polymerase II promoter@",
+            "@activation of global transcription from RNA polymerase II promoter@",
+            "@positive regulation of gene-specific transcription from RNA polymerase II promoter"
+        ],
+        "alternativeIds": [
+            "GO:0010552@",
+            "@GO:0045817"
+        ],
+        "xrefs": [
+            "Reactome:R-HSA-8866907@",
+            "@Reactome:R-HSA-8866906@",
+            "@Reactome:R-HSA-2173796"
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0048766": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0048766",
+        "label": "root hair initiation",
+        "definition": "The process in which a protrusion or bulge is formed at the site of plant root hair outgrowth.",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0048316": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0048316",
+        "label": "seed development",
+        "definition": "The process whose specific outcome is the progression of the seed over time, from its formation to the mature structure. A seed is a propagating organ formed in the sexual reproductive cycle of gymnosperms and angiosperms, consisting of a protective coat enclosing an embryo and food reserves.",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0098869": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0098869",
+        "label": "cellular oxidant detoxification",
+        "definition": "Any process carried out at the cellular level that reduces or removes the toxicity superoxide radicals or hydrogen peroxide.",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0010193": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0010193",
+        "label": "response to ozone",
+        "definition": "Any process that results in a change in state or activity of a cell or an organism (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of a ozone stimulus.",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0046885": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0046885",
+        "label": "regulation of hormone biosynthetic process",
+        "definition": "Any process that modulates the frequency, rate or extent of the chemical reactions and pathways resulting in the formation of hormones.",
+        "synonyms": [
+            "regulation of hormone anabolism@",
+            "@regulation of hormone biosynthesis@",
+            "@regulation of hormone formation@",
+            "@regulation of hormone synthesis"
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0080141": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0080141",
+        "label": "regulation of jasmonic acid biosynthetic process",
+        "definition": "Any process that modulates the frequency, rate or extent of the chemical reactions and pathways resulting in the formation of jasmonic acid.",
+        "creation_date": "2009-05-19T04:28:39Z",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0080142": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0080142",
+        "label": "regulation of salicylic acid biosynthetic process",
+        "definition": "Any process that modulates the frequency, rate or extent of the chemical reactions and pathways resulting in the formation of salicylic acid.",
+        "creation_date": "2009-05-19T04:38:23Z",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0006995": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0006995",
+        "label": "cellular response to nitrogen starvation",
+        "definition": "Any process that results in a change in state or activity of a cell (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of deprivation of nitrogen.",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0009739": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0009739",
+        "label": "response to gibberellin",
+        "definition": "Any process that results in a change in state or activity of a cell or an organism (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of a gibberellin stimulus.",
+        "synonyms": [
+            "response to gibberellin stimulus"
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0071456": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0071456",
+        "label": "cellular response to hypoxia",
+        "definition": "Any process that results in a change in state or activity of a cell (in terms of movement, secretion, enzyme production, gene expression, etc.) as a result of a stimulus indicating lowered oxygen tension. Hypoxia, defined as a decline in O2 levels below normoxic levels of 20.8 - 20.95%, results in metabolic adaptation at both the cellular and organismal level.",
+        "comment": "Note that this term should not be confused with 'cellular response to anoxia ; GO:0071454'. Note that in laboratory studies, hypoxia is typically studied at O2 concentrations ranging from 0.1 - 5%.",
+        "creation_date": "2009-12-16T04:45:20Z",
+        "synonyms": [
+            "cellular response to hypoxic stress@",
+            "@cellular response to lowered oxygen tension"
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            "Reactome:R-HSA-1234174"
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0010150": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0010150",
+        "label": "leaf senescence",
+        "definition": "The last stage of leaf development during which programmed degradation of macromolecules and nutrient recycling take place.",
+        "synonyms": [
+            ""
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    },
+    "GO:0042447": {
+        "goid": "http://purl.obolibrary.org/obo/GO_0042447",
+        "label": "hormone catabolic process",
+        "definition": "The chemical reactions and pathways resulting in the breakdown of any hormone, naturally occurring substances secreted by specialized cells that affects the metabolism or behavior of other cells possessing functional receptors for the hormone.",
+        "synonyms": [
+            "hormone breakdown@",
+            "@hormone catabolism@",
+            "@hormone degradation"
+        ],
+        "relatedSynonyms": [
+            ""
+        ],
+        "alternativeIds": [
+            ""
+        ],
+        "xrefs": [
+            ""
+        ],
+        "subsets": [
+            ""
+        ]
+    }
+}
