@@ -185,3 +185,6 @@ cython_debug/
 .Rproj
 
 data/
+.Rproj.user
+results/
+raw_data/
